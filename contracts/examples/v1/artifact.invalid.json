@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "artifactId": "not-a-uuid",
+  "attemptId": "20000000-0000-4000-8000-000000000001",
+  "type": "JUNIT_XML",
+  "objectKey": "/../../junit.xml",
+  "mediaType": "xml",
+  "sizeBytes": -1,
+  "sha256": "ABCDEF",
+  "createdAt": "yesterday"
+}

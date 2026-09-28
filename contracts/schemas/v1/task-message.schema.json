@@ -1,0 +1,303 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.testforge.dev/v1/task-message.schema.json",
+  "title": "TestForge Worker Task Message",
+  "description": "通过 Redis Streams 至少一次投递给 Worker 的版本化任务信封。MySQL 中的任务与 Attempt 状态仍是最终真相。",
+  "x-contract-version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "messageId",
+    "publishedAt",
+    "taskId",
+    "runId",
+    "attemptId",
+    "leaseToken",
+    "workerProtocol",
+    "execution",
+    "callbacks",
+    "traceparent"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "messageId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "派发消息的幂等身份；重投同一逻辑消息时保持不变。"
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notBefore": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "deliveryAttempt": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1
+    },
+    "taskId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "runId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "attemptId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "leaseToken": {
+      "type": "string",
+      "format": "uuid",
+      "description": "只授权当前 Attempt 的开始、心跳和回调，不能跨 Attempt 复用。"
+    },
+    "workerProtocol": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+$"
+    },
+    "execution": {
+      "$ref": "#/$defs/execution"
+    },
+    "callbacks": {
+      "$ref": "#/$defs/callbacks"
+    },
+    "traceparent": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$"
+    },
+    "tracestate": {
+      "type": "string",
+      "maxLength": 512
+    }
+  },
+  "$defs": {
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "projectId",
+        "targetId",
+        "workflowNodeId",
+        "sourceType",
+        "sourceRef",
+        "runner",
+        "platform",
+        "requiredFeatures",
+        "resourceMode",
+        "script",
+        "parameters",
+        "environment",
+        "timeoutSeconds"
+      ],
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "targetId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "workflowNodeId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sourceType": {
+          "type": "string",
+          "enum": ["ASSERTION", "FIXTURE"]
+        },
+        "sourceRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "runner": {
+          "type": "string",
+          "enum": ["pytest-http", "playwright-web", "airtest"]
+        },
+        "platform": {
+          "type": "string",
+          "enum": ["LINUX", "WINDOWS", "ANDROID", "IOS", "ANY"]
+        },
+        "requiredFeatures": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+          },
+          "uniqueItems": true,
+          "maxItems": 32
+        },
+        "resourceMode": {
+          "type": "string",
+          "enum": ["PROCESS_POOL", "EXCLUSIVE_DEVICE"]
+        },
+        "targetRevision": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repositoryUrl", "requestedType", "resolvedCommit", "resolvedAt"],
+          "properties": {
+            "repositoryUrl": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "requestedType": {
+              "type": "string",
+              "enum": ["DEFAULT_BRANCH", "BRANCH", "TAG", "COMMIT"]
+            },
+            "requestedValue": {
+              "type": ["string", "null"],
+              "maxLength": 255
+            },
+            "resolvedCommit": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "resolvedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "script": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "sourceRef", "checksum"],
+          "properties": {
+            "version": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "sourceRef": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            "checksum": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            }
+          }
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["environmentId", "endpoint", "config", "secretRefs"],
+          "properties": {
+            "environmentId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "endpoint": {
+              "type": "string",
+              "format": "uri",
+              "maxLength": 2048
+            },
+            "config": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "secretRefs": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              }
+            }
+          }
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400
+        },
+        "deviceSlotId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "runner": {"const": "airtest"}
+            },
+            "required": ["runner"]
+          },
+          "then": {
+            "required": ["deviceSlotId"],
+            "properties": {
+              "resourceMode": {"const": "EXCLUSIVE_DEVICE"},
+              "platform": {
+                "enum": ["WINDOWS", "ANDROID", "IOS"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "runner": {"const": "pytest-http"}
+            },
+            "required": ["runner"]
+          },
+          "then": {
+            "properties": {
+              "resourceMode": {"const": "PROCESS_POOL"}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "runner": {"const": "playwright-web"}
+            },
+            "required": ["runner"]
+          },
+          "then": {
+            "properties": {
+              "resourceMode": {"const": "PROCESS_POOL"},
+              "platform": {"enum": ["WINDOWS", "LINUX", "ANY"]}
+            }
+          }
+        }
+      ]
+    },
+    "callbacks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["startUrl", "heartbeatUrl", "completeUrl", "artifactUploadUrl"],
+      "properties": {
+        "startUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "heartbeatUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "completeUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "artifactUploadUrl": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    }
+  }
+}

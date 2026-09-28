@@ -1,0 +1,93 @@
+spring:
+  application:
+    name: testforge-app
+  datasource:
+    url: ${TESTFORGE_DB_URL:jdbc:mysql://localhost:3306/testforge?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${MYSQL_USER:testforge}
+    password: ${MYSQL_PASSWORD:testforge_mysql}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        type:
+          preferred_uuid_jdbc_type: BINARY
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:testforge_redis}
+      timeout: ${REDIS_TIMEOUT:2s}
+simple:
+  migration:
+    enabled: ${TESTFORGE_SIMPLE_MIGRATION_ENABLED:true}
+
+testforge:
+  cicd:
+    callback-base-url: ${TESTFORGE_CICD_CALLBACK_BASE_URL:http://127.0.0.1:8081}
+    expiry-scan-delay: ${TESTFORGE_CICD_EXPIRY_SCAN_DELAY:PT30S}
+    jenkins:
+      server-url: ${TESTFORGE_JENKINS_URL:http://127.0.0.1:8082}
+      folder: ${TESTFORGE_JENKINS_FOLDER:}
+      credential-ref: ${TESTFORGE_JENKINS_CREDENTIAL_REF:}
+  ai:
+    enabled: ${TESTFORGE_AI_ENABLED:false}
+    provider: ${TESTFORGE_AI_PROVIDER:codex-cli}
+    codex-command: ${TESTFORGE_CODEX_COMMAND:codex}
+    codex-home: ${TESTFORGE_AI_CODEX_HOME:}
+    model: ${TESTFORGE_AI_MODEL:gpt-5.6-luna}
+    reasoning-effort: ${TESTFORGE_AI_REASONING_EFFORT:high}
+    timeout: ${TESTFORGE_AI_TIMEOUT:90s}
+    readiness-timeout: ${TESTFORGE_AI_READINESS_TIMEOUT:3s}
+    max-concurrency: ${TESTFORGE_AI_MAX_CONCURRENCY:1}
+    max-evidence: ${TESTFORGE_AI_MAX_EVIDENCE:100}
+    max-evidence-chars: ${TESTFORGE_AI_MAX_EVIDENCE_CHARS:2000}
+    max-prompt-chars: ${TESTFORGE_AI_MAX_PROMPT_CHARS:100000}
+  artifact:
+    oss:
+      enabled: ${TESTFORGE_OSS_ENABLED:false}
+      endpoint: ${TESTFORGE_OSS_ENDPOINT:}
+      bucket: ${TESTFORGE_OSS_BUCKET:}
+      prefix: ${TESTFORGE_OSS_PREFIX:universal-test-platform}
+      access-key-id: ${TESTFORGE_OSS_ACCESS_KEY_ID:}
+      access-key-secret: ${TESTFORGE_OSS_ACCESS_KEY_SECRET:}
+      policy-duration: ${TESTFORGE_OSS_POLICY_DURATION:5m}
+      max-object-size: ${TESTFORGE_OSS_MAX_OBJECT_SIZE:104857600}
+  dispatcher:
+    stream-prefix: ${TESTFORGE_DISPATCH_STREAM_PREFIX:testforge:tasks}
+    redis:
+      enabled: ${TESTFORGE_DISPATCH_REDIS_ENABLED:true}
+    redis-pause-duration: ${TESTFORGE_DISPATCH_REDIS_PAUSE:5s}
+    relay:
+      enabled: ${TESTFORGE_DISPATCH_RELAY_ENABLED:true}
+      owner: ${TESTFORGE_DISPATCH_RELAY_OWNER:dispatcher-relay}
+      batch-size: ${TESTFORGE_DISPATCH_RELAY_BATCH_SIZE:100}
+      lease-duration: ${TESTFORGE_DISPATCH_RELAY_LEASE:30s}
+      fixed-delay: ${TESTFORGE_DISPATCH_RELAY_DELAY:PT1S}
+    reliability:
+      enabled: ${TESTFORGE_RELIABILITY_ENABLED:true}
+      scan-delay: ${TESTFORGE_RELIABILITY_SCAN_DELAY:PT1S}
+      initial-delay: ${TESTFORGE_RELIABILITY_INITIAL_DELAY:PT1S}
+      lease-duration: ${TESTFORGE_ATTEMPT_LEASE_DURATION:5m}
+      batch-size: ${TESTFORGE_RELIABILITY_BATCH_SIZE:100}
+      max-attempts: ${TESTFORGE_RETRY_MAX_ATTEMPTS:3}
+      initial-backoff: ${TESTFORGE_RETRY_INITIAL_BACKOFF:5s}
+      max-backoff: ${TESTFORGE_RETRY_MAX_BACKOFF:1m}
+  worker-gateway:
+    # Airtest 桌面用例执行期间当前不会单独续租 Attempt，租约必须覆盖一次正常 UI 用例。
+    attempt-lease-duration: ${TESTFORGE_ATTEMPT_LEASE_DURATION:5m}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+server:
+  address: ${TESTFORGE_SERVER_ADDRESS:127.0.0.1}
+  port: ${TESTFORGE_SERVER_PORT:8081}

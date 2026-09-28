@@ -1,0 +1,138 @@
+plugins {
+    id 'org.springframework.boot' version '3.3.4' apply false
+}
+
+group = 'io.testforge'
+version = '0.1.0-SNAPSHOT'
+
+def expectedProjectDependencies = [
+        'app'             : ['common', 'project-catalog', 'case-catalog', 'cicd-gateway', 'run-orchestrator',
+                             'test-job', 'dispatcher', 'worker-gateway', 'report', 'ai-diagnosis', 'observability'],
+        'common'          : [],
+        'project-catalog' : ['common'],
+        'case-catalog'    : ['common', 'project-catalog'],
+        'cicd-gateway'    : ['common', 'project-catalog'],
+        'test-job'        : ['common', 'project-catalog', 'case-catalog', 'cicd-gateway'],
+        'run-orchestrator': ['common', 'project-catalog', 'case-catalog', 'cicd-gateway', 'test-job'],
+        'dispatcher'      : ['common', 'run-orchestrator'],
+        'worker-gateway'  : ['common', 'run-orchestrator', 'report'],
+        'report'          : ['common', 'case-catalog', 'run-orchestrator'],
+        'ai-diagnosis'    : ['common', 'report'],
+        'observability'   : ['common']
+]
+
+subprojects {
+    apply plugin: 'java-library'
+
+    group = rootProject.group
+    version = rootProject.version
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        implementation platform('org.springframework.boot:spring-boot-dependencies:3.3.4')
+        testImplementation platform('org.springframework.boot:spring-boot-dependencies:3.3.4')
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.compilerArgs += ['-parameters']
+    }
+
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+    }
+
+    tasks.named('jar') {
+        enabled = project.name != 'app'
+    }
+
+    plugins.withId('org.springframework.boot') {
+        if (project.name != 'app') {
+            tasks.named('bootJar') {
+                enabled = false
+            }
+        }
+    }
+}
+
+tasks.register('verifyModuleBoundaries') {
+    group = 'verification'
+    description = '校验模块清单、项目依赖矩阵、循环依赖和 jar/bootJar 产物边界。'
+
+    doLast {
+        def expectedModules = expectedProjectDependencies.keySet() as Set
+        def actualModules = subprojects.collect { it.name } as Set
+        if (actualModules != expectedModules) {
+            throw new GradleException("模块清单不匹配，期望 ${expectedModules.sort()}，实际 ${actualModules.sort()}")
+        }
+
+        def actualProjectDependencies = [:]
+        expectedProjectDependencies.each { moduleName, expectedDependencies ->
+            def module = project(":${moduleName}")
+            def actualDependencies = module.configurations
+                    .matching { it.name in ['api', 'implementation'] }
+                    .collectMany { configuration ->
+                        configuration.dependencies.withType(ProjectDependency)
+                                .collect { dependency -> dependency.dependencyProject.name }
+                    }
+                    .toSet()
+            actualProjectDependencies[moduleName] = actualDependencies
+
+            if (actualDependencies != (expectedDependencies as Set)) {
+                throw new GradleException(
+                        "模块 ${moduleName} 的项目依赖不匹配，期望 ${expectedDependencies.sort()}，实际 ${actualDependencies.sort()}"
+                )
+            }
+        }
+
+        def visiting = [] as Set
+        def visited = [] as Set
+        Closure<Void> visit
+        visit = { String moduleName ->
+            if (moduleName in visiting) {
+                throw new GradleException("检测到循环依赖：${(visiting + moduleName).join(' -> ')}")
+            }
+            if (moduleName in visited) {
+                return
+            }
+
+            visiting.add(moduleName)
+            actualProjectDependencies[moduleName].each { dependency -> visit(dependency) }
+            visiting.remove(moduleName)
+            visited.add(moduleName)
+        }
+        expectedModules.each { moduleName -> visit(moduleName) }
+
+        def appProject = project(':app')
+        if (!appProject.pluginManager.hasPlugin('org.springframework.boot')) {
+            throw new GradleException('app 必须应用 Spring Boot 插件。')
+        }
+        if (!appProject.tasks.named('bootJar').get().enabled || appProject.tasks.named('jar').get().enabled) {
+            throw new GradleException('app 必须只生成 bootJar，不能生成普通 jar。')
+        }
+
+        subprojects.findAll { it.name != 'app' }.each { module ->
+            def bootJarTask = module.tasks.findByName('bootJar')
+            if (!module.tasks.named('jar').get().enabled || (bootJarTask != null && bootJarTask.enabled)) {
+                throw new GradleException("${module.name} 必须只生成普通 jar，不能生成 bootJar。")
+            }
+        }
+    }
+}
+
+subprojects {
+    tasks.named('check') {
+        dependsOn rootProject.tasks.named('verifyModuleBoundaries')
+    }
+}

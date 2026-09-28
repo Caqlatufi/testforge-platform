@@ -1,0 +1,34 @@
+plugins {
+    id 'org.springframework.boot'
+}
+
+dependencies {
+    implementation project(':common')
+    implementation project(':project-catalog')
+    implementation project(':case-catalog')
+    implementation project(':cicd-gateway')
+    implementation project(':test-job')
+    implementation project(':run-orchestrator')
+    implementation project(':dispatcher')
+    implementation project(':worker-gateway')
+    implementation project(':report')
+    implementation project(':ai-diagnosis')
+    implementation project(':observability')
+
+    implementation('yhc.framework:simple-migration:1.0.1') { transitive = false }
+    implementation('yhc.framework:commons:1.0.1') { transitive = false }
+
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'com.h2database:h2'
+}
+
+bootJar {
+    archiveFileName = 'testforge-app.jar'
+}
+
+jar {
+    enabled = false
+}

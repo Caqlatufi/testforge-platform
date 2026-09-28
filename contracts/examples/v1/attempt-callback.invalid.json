@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1.0.0",
+  "callbackKey": "b0000000-0000-4000-8000-000000000001",
+  "attemptId": "20000000-0000-4000-8000-000000000001",
+  "leaseToken": "60000000-0000-4000-8000-000000000001",
+  "workerId": "worker-linux-01",
+  "status": "PASSED",
+  "completedAt": "2026-09-17T14:00:05Z",
+  "durationMs": -1,
+  "summary": "错误地把失败声明为通过",
+  "failure": {
+    "type": "PRODUCT_DEFECT",
+    "message": "期望 200，实际 500"
+  },
+  "artifacts": []
+}

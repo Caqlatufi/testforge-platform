@@ -1,0 +1,22 @@
+meta {
+  name: Duplicate Callback
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/attempts/{{attemptId}}/callback
+  body: json
+  auth: none
+}
+
+body:json {
+  {"schemaVersion":"1.0.0","callbackKey":"{{callbackKey}}","attemptId":"{{attemptId}}","leaseToken":"{{leaseToken}}","workerId":"{{workerId}}","status":"PASSED","completedAt":"2026-09-22T04:00:00Z","durationMs":100,"summary":"reliability acceptance","failure":null,"artifacts":[],"metrics":{}}
+}
+
+tests {
+  test("duplicate is stable and does not rewrite terminal state", function () {
+    expect(res.status).to.equal(200);
+    expect(["ACCEPTED", "DUPLICATE"]).to.include(res.body.data.disposition);
+  });
+}

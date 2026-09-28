@@ -1,0 +1,37 @@
+meta {
+  name: 01 Create HEADLESS Case
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/projects/{{projectId}}/cases
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "targetId": "00000000-0000-0000-0000-000000000001",
+    "name": "CR headless acceptance",
+    "kind": "ASSERTION",
+    "scope": "PROJECT",
+    "parameterSchema": {"type": "object"},
+    "tags": ["tfp-063"],
+    "timeoutSeconds": 30,
+    "executionRequirement": {
+      "executorType": "PYTEST_HTTP",
+      "interaction": "HEADLESS",
+      "capabilities": [],
+      "resourceProfile": "script-small",
+      "leaseScope": "CASE"
+    }
+  }
+}
+
+tests {
+  test("returns created Case with execution requirement", function () {
+    expect(res.status).to.be.oneOf([200, 201]);
+    expect(res.body.data.executionRequirement.interaction).to.equal("HEADLESS");
+  });
+}

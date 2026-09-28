@@ -1,0 +1,13 @@
+{
+  "schema": "io.testforge/reliability-matrix/v1",
+  "scenarios": [
+    {"id":"REL-01","name":"Worker 失联与 Lease 回收","entry":"worker_loss.py","evidence":"../evidence/reliability-observability-delivery/worker-loss.json"},
+    {"id":"REL-02","name":"20 路并发重复与冲突回调","entry":"callback_race.py","evidence":"../evidence/reliability-observability-delivery/callback-race.json"},
+    {"id":"REL-03","name":"旧 Attempt 迟到回调","entry":"worker_loss.py + Bruno 04","evidence":"../evidence/reliability-observability-delivery/worker-loss.json"},
+    {"id":"REL-04","name":"Redis 重启后 Pending 接管","entry":"redis_recovery.py","evidence":"../evidence/reliability-observability-delivery/redis-recovery.json"},
+    {"id":"REL-05","name":"DeviceSlot 异常释放","entry":"device_slot_recovery.py + Bruno 05","evidence":"../evidence/reliability-observability-delivery/device-slot-recovery.json"},
+    {"id":"REL-06","name":"SSE/历史断点续传","entry":"../execution_event_http.py + Bruno 06","evidence":"../evidence/reliability-observability-delivery/event-replay.json"},
+    {"id":"REL-07","name":"PROCESS_POOL 100 Task","entry":"worker_concurrency_100.py","evidence":"../evidence/worker-concurrency-100.json"},
+    {"id":"REL-08","name":"DEVICE_POOL 按 DeviceSlot 并发","entry":"../virtual-environment-parallel/verify.py","evidence":"../evidence/virtual-environment-parallel/latest.json"}
+  ]
+}

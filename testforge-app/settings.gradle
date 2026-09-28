@@ -1,0 +1,25 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+}
+
+rootProject.name = 'testforge-app'
+
+include 'app'
+include 'common'
+include 'project-catalog'
+include 'case-catalog'
+include 'cicd-gateway'
+include 'test-job'
+include 'run-orchestrator'
+include 'dispatcher'
+include 'worker-gateway'
+include 'report'
+include 'ai-diagnosis'
+include 'observability'

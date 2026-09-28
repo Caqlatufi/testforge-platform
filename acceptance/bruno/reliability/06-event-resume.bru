@@ -1,0 +1,21 @@
+meta {
+  name: Event Cursor Resume
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/runs/{{runId}}/events/history?afterEventId={{afterEventId}}&limit=100
+  body: none
+  auth: none
+}
+
+tests {
+  test("history is strictly after the cursor and ordered", function () {
+    expect(res.status).to.equal(200);
+    const events = res.body.data.events;
+    const cursor = Number(bru.getEnvVar("afterEventId"));
+    expect(events.every(event => event.id > cursor)).to.equal(true);
+    expect(events.map(event => event.id)).to.eql([...events.map(event => event.id)].sort((a, b) => a - b));
+  });
+}

@@ -1,0 +1,22 @@
+meta {
+  name: Late Callback
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/attempts/{{attemptId}}/callback
+  body: json
+  auth: none
+}
+
+body:json {
+  {"schemaVersion":"1.0.0","callbackKey":"{{$guid}}","attemptId":"{{attemptId}}","leaseToken":"{{leaseToken}}","workerId":"{{workerId}}","status":"PASSED","completedAt":"2026-09-22T04:00:02Z","durationMs":999,"summary":"late callback","failure":null,"artifacts":[],"metrics":{}}
+}
+
+tests {
+  test("superseded attempt is classified as stale", function () {
+    expect(res.status).to.equal(200);
+    expect(res.body.data.disposition).to.equal("STALE");
+  });
+}

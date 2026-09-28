@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.testforge.dev/v1/artifact.schema.json",
+  "title": "TestForge Artifact",
+  "description": "Worker 上传到对象存储后的不可变附件索引。载荷只携带 objectKey 与完整性信息，不内嵌大文件。",
+  "x-contract-version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "artifactId",
+    "attemptId",
+    "type",
+    "objectKey",
+    "mediaType",
+    "sizeBytes",
+    "sha256",
+    "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "artifactId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "attemptId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "LOG",
+        "JUNIT_XML",
+        "SCREENSHOT",
+        "VIDEO",
+        "AIRTEST_HTML",
+        "TRACE",
+        "WORLD_STATE",
+        "COMBAT_EVENT",
+        "OTHER"
+      ]
+    },
+    "objectKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "mediaType": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 255,
+      "pattern": "^[^/\\s]+/[^/\\s]+$"
+    },
+    "sizeBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5368709120
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "stepName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "maxProperties": 50
+    }
+  }
+}

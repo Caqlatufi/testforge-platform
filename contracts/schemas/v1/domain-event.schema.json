@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.testforge.dev/v1/domain-event.schema.json",
+  "title": "TestForge Domain Event Envelope",
+  "description": "供 Outbox、审计、SSE 与跨模块订阅使用的只追加事件信封。事件是事实记录，不授权消费者越过所属模块修改状态。",
+  "x-contract-version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "eventType",
+    "aggregateType",
+    "aggregateId",
+    "sequence",
+    "occurredAt",
+    "producer",
+    "traceId",
+    "payload"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)+$",
+      "maxLength": 160,
+      "examples": ["task.state.changed", "attempt.callback.stale"]
+    },
+    "aggregateType": {
+      "type": "string",
+      "enum": ["PROJECT", "CASE", "WORKFLOW", "RUN", "TASK", "ATTEMPT", "WORKER", "DEVICE", "REPORT", "DIAGNOSIS"]
+    },
+    "aggregateId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "同一 aggregateId 内严格递增，用于 SSE 续传和重复消费去重。"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "producer": {
+      "type": "string",
+      "enum": [
+        "project-catalog",
+        "case-catalog",
+        "run-orchestrator",
+        "dispatcher",
+        "worker-gateway",
+        "report",
+        "ai-diagnosis",
+        "observability"
+      ]
+    },
+    "traceId": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "correlationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "causationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "由 eventType 决定的业务快照；不得包含明文密钥或完整大日志。"
+    }
+  }
+}

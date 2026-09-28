@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.testforge.dev/v1/attempt-callback.schema.json",
+  "title": "TestForge Attempt Callback",
+  "description": "Worker 对一个 Attempt 的幂等完成回调。控制面以 attemptId、leaseToken、callbackKey 和载荷哈希判定重复、冲突与迟到。",
+  "x-contract-version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "callbackKey",
+    "attemptId",
+    "leaseToken",
+    "workerId",
+    "status",
+    "completedAt",
+    "durationMs",
+    "summary",
+    "artifacts"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "callbackKey": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "attemptId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "leaseToken": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "workerId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PASSED", "ASSERTION_FAILED", "INFRA_FAILED", "CANCELLED"]
+    },
+    "completedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "durationMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "failure": {
+      "$ref": "#/$defs/failure"
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "artifact.schema.json"
+      },
+      "uniqueItems": true,
+      "maxItems": 100
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      },
+      "maxProperties": 100
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {"const": "PASSED"}
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "not": {"required": ["failure"]}
+      },
+      "else": {
+        "required": ["failure"]
+      }
+    }
+  ],
+  "$defs": {
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "message"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "PRODUCT_DEFECT",
+            "SCRIPT_ERROR",
+            "ENVIRONMENT",
+            "WORKER_LOST",
+            "DEVICE_ERROR",
+            "IMAGE_MATCH_TIMEOUT",
+            "CANCELLED",
+            "UNKNOWN"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "stackDigest": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "details": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

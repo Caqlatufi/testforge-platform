@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testforge;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    properties:
+      hibernate:
+        type:
+          preferred_uuid_jdbc_type: BINARY
+simple:
+  migration:
+    enabled: false
+
+testforge:
+  dispatcher:
+    relay:
+      enabled: false
+    reliability:
+      enabled: false
+
+management:
+  health:
+    redis:
+      enabled: false

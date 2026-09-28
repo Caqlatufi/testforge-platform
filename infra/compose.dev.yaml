@@ -1,0 +1,13 @@
+services:
+  mysql:
+    restart: unless-stopped
+  redis:
+    restart: unless-stopped
+  minio:
+    restart: unless-stopped
+  otel-collector:
+    restart: unless-stopped
+  prometheus:
+    restart: unless-stopped
+  grafana:
+    restart: unless-stopped

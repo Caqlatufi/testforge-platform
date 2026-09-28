@@ -1,0 +1,28 @@
+services:
+  mysql:
+    restart: "no"
+    volumes:
+      - type: tmpfs
+        target: /var/lib/mysql
+  redis:
+    restart: "no"
+    volumes:
+      - type: tmpfs
+        target: /data
+  minio:
+    restart: "no"
+    volumes:
+      - type: tmpfs
+        target: /data
+  otel-collector:
+    restart: "no"
+  prometheus:
+    restart: "no"
+    volumes:
+      - type: tmpfs
+        target: /prometheus
+  grafana:
+    restart: "no"
+    volumes:
+      - type: tmpfs
+        target: /var/lib/grafana

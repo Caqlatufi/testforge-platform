@@ -1,0 +1,14 @@
+{
+  "execution": {
+    "runner": "playwright-web",
+    "resourceMode": "PROCESS_POOL",
+    "platform": "WINDOWS",
+    "parameters": {
+      "baseUrl": "http://127.0.0.1:5174",
+      "browserChannel": "chrome",
+      "headless": true,
+      "viewportWidth": 1440,
+      "viewportHeight": 1000
+    }
+  }
+}

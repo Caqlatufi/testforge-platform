@@ -1,0 +1,21 @@
+meta {
+  name: Device Slot Released
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/v1/device-slots
+  body: none
+  auth: none
+}
+
+tests {
+  test("abnormal attempt no longer owns the device", function () {
+    expect(res.status).to.equal(200);
+    const slot = res.body.data.find(item => item.slotId === bru.getEnvVar("slotId"));
+    expect(slot).to.not.equal(undefined);
+    expect(slot.leaseState).to.equal("AVAILABLE");
+    expect(slot.currentAttemptId).to.equal(null);
+  });
+}

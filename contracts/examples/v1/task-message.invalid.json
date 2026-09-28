@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0.0",
+  "messageId": "40000000-0000-4000-8000-000000000001",
+  "publishedAt": "2026-09-17T14:00:00Z",
+  "taskId": "50000000-0000-4000-8000-000000000001",
+  "runId": "30000000-0000-4000-8000-000000000001",
+  "attemptId": "20000000-0000-4000-8000-000000000001",
+  "workerProtocol": "2.0",
+  "execution": {
+    "projectId": "70000000-0000-4000-8000-000000000001",
+    "targetId": "80000000-0000-4000-8000-000000000001",
+    "workflowNodeId": "90000000-0000-4000-8000-000000000001",
+    "sourceType": "ASSERTION",
+    "sourceRef": "case:broken",
+    "runner": "airtest",
+    "platform": "LINUX",
+    "requiredFeatures": ["WINDOWS_UI"],
+    "resourceMode": "PROCESS_POOL",
+    "script": {
+      "version": 0,
+      "sourceRef": "broken.air",
+      "checksum": "not-a-checksum"
+    },
+    "parameters": {},
+    "environment": {
+      "environmentId": "a0000000-0000-4000-8000-000000000001",
+      "endpoint": "not a uri",
+      "config": {},
+      "secretRefs": {}
+    },
+    "timeoutSeconds": 0
+  },
+  "callbacks": {
+    "startUrl": "invalid",
+    "heartbeatUrl": "invalid",
+    "completeUrl": "invalid",
+    "artifactUploadUrl": "invalid"
+  },
+  "traceparent": "invalid"
+}

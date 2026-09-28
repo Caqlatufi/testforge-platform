@@ -1,0 +1,11 @@
+groups:
+  - name: testforge-infrastructure
+    rules:
+      - alert: TestForgeTargetDown
+        expr: up{job=~"otel-collector|testforge-otel-metrics"} == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TestForge observation target is unavailable"
+          description: "Prometheus has failed to scrape {{ $labels.job }} for more than one minute."

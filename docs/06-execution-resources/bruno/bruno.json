@@ -1,0 +1,6 @@
+{
+  "version": "1",
+  "name": "TestForge Case Resource Scheduling",
+  "type": "collection",
+  "ignore": ["node_modules", ".git"]
+}

@@ -1,0 +1,24 @@
+meta {
+  name: 02 Publish Workflow Resource Snapshot
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/workflows/{{workflowId}}/publish
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "expectedDraftRevision": 0
+  }
+}
+
+tests {
+  test("publishes immutable workflow version", function () {
+    expect(res.status).to.be.oneOf([200, 201]);
+    expect(res.body.data.version).to.be.greaterThan(0);
+  });
+}

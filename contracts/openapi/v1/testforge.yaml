@@ -1,0 +1,3284 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+info:
+  title: TestForge Control Plane API
+  version: 1.0.0
+  description: |
+    TestForge 项目、用例、Workflow、Run、Worker、Attempt、报告与诊断的公开契约。
+    MySQL 是运行状态真相源；派发和回调均按至少一次语义处理。
+    AI 诊断仅给出带证据的建议，不改变确定性测试结果。
+servers:
+  - url: http://localhost:8081
+    description: 本地开发环境
+tags:
+  - name: Health
+  - name: Projects
+  - name: Environments
+  - name: Catalog
+  - name: Workflows
+  - name: TestJobs
+  - name: CICD
+  - name: Runs
+  - name: Workers
+  - name: Attempts
+  - name: Reports
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      tags: [Health]
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: 应用可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /api/v1/projects:
+    get:
+      tags: [Projects]
+      operationId: listProjects
+      responses:
+        "200":
+          description: 项目列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Project"
+    post:
+      tags: [Projects]
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/ProjectCreated"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
+          $ref: "#/components/responses/StateConflict"
+
+  /api/v1/projects/{projectId}:
+    get:
+      tags: [Projects]
+      operationId: getProject
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: 项目及被测对象摘要
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Projects]
+      operationId: updateProject
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+      responses:
+        "200":
+          description: 项目已更新
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Project"
+
+  /api/v1/projects/{projectId}/targets:
+    post:
+      tags: [Projects]
+      operationId: createTarget
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTargetRequest"
+      responses:
+        "201":
+          description: 被测对象已创建
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Target"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/environments:
+    get:
+      tags: [Environments]
+      operationId: listEnvironments
+      parameters:
+        - name: enabled
+          in: query
+          schema: { type: boolean }
+        - name: platform
+          in: query
+          schema: { type: string, enum: [WINDOWS, ANDROID, IOS] }
+      responses:
+        "200":
+          description: 平台级共享环境目录
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/Environment" } }
+    post:
+      tags: [Environments]
+      operationId: createEnvironment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEnvironmentRequest"
+      responses:
+        "201":
+          description: 全局共享环境已创建
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Environment"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/targets/{targetId}:
+    put:
+      tags: [Projects]
+      operationId: updateTarget
+      parameters:
+        - $ref: "#/components/parameters/TargetId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTargetRequest"
+      responses:
+        "200":
+          description: 被测对象已更新
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Target"
+
+  /api/v1/targets/{targetId}/revisions/resolve:
+    post:
+      tags: [Projects]
+      operationId: resolveTargetRevision
+      parameters:
+        - $ref: "#/components/parameters/TargetId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevisionSelector"
+      responses:
+        "200":
+          description: Git 引用已解析为不可变 Commit
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ResolvedRevision"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/projects/{projectId}/revisions:
+    get:
+      tags: [Projects]
+      operationId: listProjectRevisions
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [BRANCH, TAG]
+      responses:
+        "200":
+          description: 分支或 Tag 及其当前 Commit 元数据
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/RevisionOption"
+
+  /api/v1/environments/{environmentId}:
+    put:
+      tags: [Environments]
+      operationId: updateEnvironment
+      parameters:
+        - name: environmentId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEnvironmentRequest"
+      responses:
+        "200":
+          description: 环境已更新
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Environment"
+
+  /api/v1/environments/runtime:
+    get:
+      tags: [Environments]
+      operationId: listEnvironmentRuntimeStatuses
+      responses:
+        "200":
+          description: 已登记环境的真实基础设施运行状态
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/EnvironmentRuntimeStatus"
+
+  /api/v1/environments/runtime/{environmentId}/start:
+    post:
+      tags: [Environments]
+      operationId: startEnvironmentRuntime
+      parameters:
+        - name: environmentId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "200":
+          description: 环境启动命令已完成；重复启动已运行环境保持幂等
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/EnvironmentRuntimeStatus"
+
+  /api/v1/projects/{projectId}/cases:
+    get:
+      tags: [Catalog]
+      operationId: listCases
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: 项目下的原子用例列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TestCase"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Catalog]
+      operationId: createCase
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCaseRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/ResourceCreated"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/cases/{caseId}:
+    get:
+      tags: [Catalog]
+      operationId: getCase
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+      responses:
+        "200":
+          description: 原子用例详情
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TestCase"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Catalog]
+      operationId: updateCase
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCaseRequest"
+      responses:
+        "200":
+          description: 原子用例已更新
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TestCase"
+
+  /api/v1/cases/shared:
+    get:
+      tags: [Catalog]
+      operationId: listSharedCases
+      responses:
+        "200":
+          description: 平台通用原子用例列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TestCase"
+
+  /api/v1/projects/{projectId}/case-definitions/validate:
+    post:
+      tags: [Catalog]
+      operationId: validateCaseDefinition
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseDefinitionRequest"
+      responses:
+        "200":
+          description: YAML Case 校验结果
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CaseDefinition"
+
+  /api/v1/projects/{projectId}/case-definitions:
+    post:
+      tags: [Catalog]
+      operationId: createCaseDefinition
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseDefinitionRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/ResourceCreated"
+
+  /api/v1/cases/{caseId}/definition:
+    get:
+      tags: [Catalog]
+      operationId: getCaseDefinition
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+      responses:
+        "200":
+          description: YAML Case 定义
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CaseDefinition"
+    put:
+      tags: [Catalog]
+      operationId: updateCaseDefinition
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseDefinitionRequest"
+      responses:
+        "200":
+          description: YAML Case 已更新
+
+  /api/v1/projects/{projectId}/assets:
+    get:
+      tags: [Catalog]
+      operationId: listCaseAssets
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: 项目托管脚本资源
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/CaseAsset"
+    post:
+      tags: [Catalog]
+      operationId: uploadCaseAsset
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: 资源已存储或命中内容去重
+
+  /api/v1/assets/{assetId}:
+    get:
+      tags: [Catalog]
+      operationId: getCaseAsset
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "200":
+          description: 托管资源元数据
+
+  /api/v1/assets/{assetId}/content:
+    get:
+      tags: [Catalog]
+      operationId: downloadCaseAsset
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "200":
+          description: Worker 使用的不可变资源内容
+          headers:
+            X-TestForge-SHA256:
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  /api/v1/cases/{caseId}/scripts:
+    get:
+      tags: [Catalog]
+      operationId: listScriptVersions
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+      responses:
+        "200":
+          description: 用例的不可变脚本版本列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ScriptVersion"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Catalog]
+      operationId: createScriptVersion
+      deprecated: true
+      description: 仅供旧版初始化与兼容工具；新建和编辑 Case 必须使用 YAML Case Definition API。
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateScriptVersionRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/ResourceCreated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/projects/{projectId}/suites:
+    get:
+      tags: [Catalog]
+      operationId: listSuites
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: targetId
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "200":
+          description: 项目和被测对象下的无序套件列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TestSuite"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Catalog]
+      operationId: createSuite
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSuiteRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/ResourceCreated"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/suites/{suiteId}:
+    get:
+      tags: [Catalog]
+      operationId: getSuite
+      parameters:
+        - $ref: "#/components/parameters/SuiteId"
+      responses:
+        "200":
+          description: TestSuite 详情
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TestSuite"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Catalog]
+      operationId: updateSuite
+      parameters:
+        - $ref: "#/components/parameters/SuiteId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSuiteRequest"
+      responses:
+        "200":
+          description: TestSuite 已更新
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TestSuite"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/StateConflict"
+
+  /api/v1/projects/{projectId}/workflows:
+    post:
+      tags: [Workflows]
+      operationId: createWorkflow
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkflowRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/ResourceCreated"
+
+  /api/v1/workflows/{workflowId}/graph:
+    put:
+      tags: [Workflows]
+      operationId: saveWorkflowGraph
+      parameters:
+        - $ref: "#/components/parameters/WorkflowId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowGraphRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Accepted"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
+          $ref: "#/components/responses/StateConflict"
+
+  /api/v1/workflows/{workflowId}/publish:
+    post:
+      tags: [Workflows]
+      operationId: publishWorkflow
+      parameters:
+        - $ref: "#/components/parameters/WorkflowId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdempotentRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Accepted"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
+          $ref: "#/components/responses/StateConflict"
+
+  /api/v1/workflows/{workflowId}:
+    get:
+      tags: [Workflows]
+      operationId: getWorkflow
+      parameters:
+        - $ref: "#/components/parameters/WorkflowId"
+        - name: version
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: 草稿或指定发布版本
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/WorkflowGraph"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/targets/{targetId}/deployment-profiles:
+    get:
+      tags: [CICD]
+      operationId: listDeploymentProfiles
+      parameters:
+        - $ref: "#/components/parameters/TargetId"
+      responses:
+        "200":
+          description: 目标的 CI/CD 接入配置
+    post:
+      tags: [CICD]
+      operationId: createDeploymentProfile
+      parameters:
+        - $ref: "#/components/parameters/TargetId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDeploymentProfileRequest"
+      responses:
+        "201":
+          description: Jenkins DeploymentProfile 已创建
+
+  /api/v1/targets/{targetId}/deployments:
+    get:
+      tags: [CICD]
+      operationId: listTargetDeployments
+      parameters:
+        - $ref: "#/components/parameters/TargetId"
+      responses:
+        "200":
+          description: 目标的部署历史
+    post:
+      tags: [CICD]
+      operationId: prepareTargetDeployment
+      parameters:
+        - $ref: "#/components/parameters/TargetId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrepareDeploymentRequest"
+      responses:
+        "201":
+          description: 已复用或新建不可变 Commit 对应的 Deployment
+        "423":
+          description: DeploymentProfile 并发配额已满
+
+  /api/v1/deployments/{deploymentId}:
+    get:
+      tags: [CICD]
+      operationId: getTargetDeployment
+      parameters:
+        - name: deploymentId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "200":
+          description: Deployment 当前状态
+
+  /api/v1/deployments/{deploymentId}/callbacks/jenkins:
+    post:
+      tags: [CICD]
+      operationId: acceptJenkinsDeploymentCallback
+      security: []
+      parameters:
+        - name: deploymentId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JenkinsDeploymentCallbackRequest"
+      responses:
+        "200":
+          description: 回调已幂等接受
+        "409":
+          $ref: "#/components/responses/StateConflict"
+
+  /api/v1/projects/{projectId}/pipelines:
+    get:
+      tags: [CICD]
+      operationId: listProjectPipelines
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: 由 CI Provider 提供的只读 Pipeline 目录
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/PipelineRef" } }
+
+  /api/v1/test-jobs:
+    get:
+      tags: [TestJobs]
+      operationId: listTestJobs
+      parameters:
+        - name: projectId
+          in: query
+          schema: { $ref: "#/components/schemas/Uuid" }
+      responses:
+        "200":
+          description: Test Job 列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/TestJob" } }
+    post:
+      tags: [TestJobs]
+      operationId: createTestJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveTestJobRequest" }
+      responses:
+        "201":
+          description: DRAFT Test Job 已创建
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties: { data: { $ref: "#/components/schemas/TestJob" } }
+
+  /api/v1/test-jobs/{testJobId}:
+    get:
+      tags: [TestJobs]
+      operationId: getTestJob
+      parameters:
+        - $ref: "#/components/parameters/TestJobId"
+      responses:
+        "200":
+          description: Test Job 详情
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties: { data: { $ref: "#/components/schemas/TestJob" } }
+    put:
+      tags: [TestJobs]
+      operationId: updateTestJob
+      parameters:
+        - $ref: "#/components/parameters/TestJobId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveTestJobRequest" }
+      responses:
+        "200": { description: Test Job 已更新并回到 DRAFT }
+
+  /api/v1/test-jobs/{testJobId}/activate:
+    post:
+      tags: [TestJobs]
+      operationId: activateTestJob
+      parameters:
+        - $ref: "#/components/parameters/TestJobId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TestJobVersionRequest" }
+      responses:
+        "200": { description: 外部引用重验通过，Test Job 已启用 }
+
+  /api/v1/test-jobs/{testJobId}/disable:
+    post:
+      tags: [TestJobs]
+      operationId: disableTestJob
+      parameters:
+        - $ref: "#/components/parameters/TestJobId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TestJobVersionRequest" }
+      responses:
+        "200": { description: Test Job 已禁用 }
+
+  /api/v1/test-jobs/{testJobId}/copies:
+    post:
+      tags: [TestJobs]
+      operationId: copyTestJob
+      parameters:
+        - $ref: "#/components/parameters/TestJobId"
+      responses:
+        "201": { description: 同配置、同 Commit 的 DRAFT 测试任务副本已创建 }
+
+  /api/v1/test-jobs/{testJobId}/execute:
+    post:
+      tags: [TestJobs, Runs]
+      operationId: executeTestJob
+      parameters:
+        - $ref: "#/components/parameters/TestJobId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IdempotentRequest" }
+      responses:
+        "201": { description: 使用任务固定 Commit 的内部执行 Attempt 已创建 }
+        "409": { description: 任务未确认或已有活动 Attempt }
+
+  /api/v1/test-jobs/{testJobId}/attempts:
+    get:
+      tags: [TestJobs, Runs]
+      operationId: listTestJobAttempts
+      parameters:
+        - $ref: "#/components/parameters/TestJobId"
+      responses:
+        "200": { description: 当前测试任务的内部执行 Attempt 历史 }
+
+  /api/v1/test-jobs/{testJobId}/runs:
+    get:
+      tags: [TestJobs, Runs]
+      operationId: listTestJobRuns
+      parameters:
+        - $ref: "#/components/parameters/TestJobId"
+      responses:
+        "200": { description: 当前任务的 Run 历史 }
+    post:
+      tags: [TestJobs, Runs]
+      operationId: launchTestJobRun
+      parameters:
+        - $ref: "#/components/parameters/TestJobId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IdempotentRequest" }
+      responses:
+        "201": { description: 带 TestJobSnapshot 的 Run 已创建 }
+
+  /api/v1/test-jobs/{testJobId}/comparison-runs:
+    post:
+      tags: [TestJobs, Runs]
+      operationId: launchTestJobComparison
+      parameters:
+        - $ref: "#/components/parameters/TestJobId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ComparisonLaunchRequest" }
+      responses:
+        "201": { description: baseline/candidate 配对 Run 已创建 }
+
+  /api/v1/test-jobs/run-summaries:
+    get:
+      tags: [TestJobs, Runs]
+      operationId: listTestJobRunSummaries
+      responses:
+        "200":
+          description: 实时运行中心一级 Test Job 摘要
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/TestTaskExecutionSummary" } }
+
+  /api/v1/test-jobs/execution-summaries:
+    get:
+      tags: [TestJobs, Runs]
+      operationId: listTestTaskExecutionSummaries
+      responses:
+        "200":
+          description: 实时运行中心测试任务摘要
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: "#/components/schemas/TestTaskExecutionSummary" } }
+
+  /api/v1/runs:
+    post:
+      tags: [Runs]
+      operationId: createRun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRunRequest"
+      responses:
+        "201":
+          description: Run 已幂等创建
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RunSummary"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
+          $ref: "#/components/responses/IdempotencyConflict"
+
+  /api/v1/runs/{runId}:
+    get:
+      tags: [Runs]
+      operationId: getRun
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: Run 聚合及计数
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RunSummary"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/runs/{runId}/cancel:
+    post:
+      tags: [Runs]
+      operationId: cancelRun
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelRunRequest"
+      responses:
+        "202":
+          $ref: "#/components/responses/Accepted"
+        "409":
+          $ref: "#/components/responses/StateConflict"
+
+  /api/v1/runs/{runId}/graph:
+    get:
+      tags: [Runs]
+      operationId: getRunGraph
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: 发布 DAG 快照与节点运行态
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RunGraph"
+
+  /api/v1/runs/{runId}/events:
+    get:
+      tags: [Runs]
+      operationId: streamRunEvents
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+        - name: Last-Event-ID
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 可使用 Last-Event-ID 续传的 SSE 事件流
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: 每个 data 字段是 domain-event.schema.json 实例
+
+  /api/v1/runs/{runId}/events/history:
+    get:
+      tags: [Runs]
+      operationId: listRunExecutionEvents
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+        - name: afterEventId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+      responses:
+        "200":
+          description: 按持久化事件 ID 升序返回，afterEventId 为排他游标
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ExecutionEventHistory"
+
+  /api/v1/monitoring/resources:
+    get:
+      tags: [Observability]
+      operationId: getPlatformResourceSnapshot
+      responses:
+        "200":
+          description: 进程池、设备池与派发链路当前快照
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/PlatformResourceSnapshot"
+
+  /api/v1/reports/comparisons:
+    get:
+      tags: [Reports]
+      operationId: compareRuns
+      parameters:
+        - name: baselineRunId
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/Uuid" }
+        - name: candidateRunId
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/Uuid" }
+      responses:
+        "200":
+          description: 对同一项目、同一 Workflow 的两个 Run 做逐 Case 差分
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RunComparisonReport"
+
+  /api/v1/reports/comparison-groups/{comparisonGroupId}:
+    get:
+      tags: [Reports]
+      operationId: compareRunGroup
+      parameters:
+        - name: comparisonGroupId
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/Uuid" }
+      responses:
+        "200":
+          description: 按持久化 comparisonGroupId 生成差分报告
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/RunComparisonReport" }
+
+  /api/v1/workers/register:
+    post:
+      tags: [Workers]
+      operationId: registerWorker
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterWorkerRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Accepted"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/workers/{workerId}/devices:
+    put:
+      tags: [Workers]
+      operationId: upsertDeviceSlot
+      parameters:
+        - $ref: "#/components/parameters/WorkerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertDeviceRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Accepted"
+        "409":
+          $ref: "#/components/responses/StateConflict"
+
+  /api/v1/attempts/{attemptId}/start:
+    post:
+      tags: [Attempts]
+      operationId: startAttempt
+      parameters:
+        - $ref: "#/components/parameters/AttemptId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptLeaseRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Accepted"
+        "409":
+          $ref: "#/components/responses/LeaseExpired"
+
+  /api/v1/attempts/{attemptId}/heartbeat:
+    post:
+      tags: [Attempts]
+      operationId: heartbeatAttempt
+      parameters:
+        - $ref: "#/components/parameters/AttemptId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptHeartbeatRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Accepted"
+        "409":
+          $ref: "#/components/responses/LeaseExpired"
+
+  /api/v1/attempts/{attemptId}/callback:
+    post:
+      tags: [Attempts]
+      operationId: completeAttempt
+      description: 相同 callbackKey 与载荷返回原结果；相同 key 不同载荷返回 409；失效 Attempt 仅记录审计事件。
+      parameters:
+        - $ref: "#/components/parameters/AttemptId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../../schemas/v1/attempt-callback.schema.json"
+      responses:
+        "200":
+          description: 首次或幂等重复回调已接收
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CallbackReceipt"
+        "409":
+          description: 幂等冲突或租约失效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/attempts/{attemptId}/artifacts:
+    post:
+      tags: [Attempts]
+      operationId: createAttemptArtifactUploadPolicy
+      description: Gateway 校验 Attempt 租约后，签发限定 objectKey、大小和 SHA-256 元数据的短期 OSS POST 策略。
+      parameters:
+        - $ref: "#/components/parameters/AttemptId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArtifactUploadPolicyRequest"
+      responses:
+        "200":
+          description: 短期 OSS 直传策略
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ArtifactUploadPolicy"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
+          $ref: "#/components/responses/StateConflict"
+        "503":
+          description: OSS 上传策略未配置
+
+  /api/v1/reports/runs/{runId}:
+    get:
+      tags: [Reports]
+      operationId: getRunReport
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: 确定性运行报告
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RunReport"
+
+  /api/v1/reports/runs/cases/{caseId}/history:
+    get:
+      tags: [Reports]
+      operationId: getCaseRunHistory
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uuid"
+      responses:
+        "200":
+          description: 同一 Case 最近十次有效结果及 Flaky 证据
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CaseHistory"
+
+  /api/v1/device-slots:
+    get:
+      tags: [Workers]
+      operationId: listDeviceSlotPanel
+      responses:
+        "200":
+          description: DeviceSlot 在线状态与当前安全租约
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/DeviceSlotPanel"
+
+  /api/v1/reports/{runId}/diagnosis/status:
+    get:
+      tags: [Reports]
+      operationId: getAiDiagnosisStatus
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: AI Provider 可用或显式降级状态
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AiDiagnosisStatus"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/reports/{reportId}/diagnosis:
+    get:
+      tags: [Reports]
+      operationId: getLatestReportDiagnosis
+      parameters:
+        - $ref: "#/components/parameters/ReportId"
+      responses:
+        "200":
+          description: 最近一次成功的 AI 建议
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AiDiagnosis"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/comparison-runs:
+    post:
+      tags: [Runs]
+      operationId: createComparisonRun
+      summary: 一次幂等创建 baseline/candidate 配对 Run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateComparisonRunRequest"
+      responses:
+        "201":
+          description: 配对 Run 已创建，两侧版本均已固化为 Commit
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ComparisonRun" }
+        "409":
+          $ref: "#/components/responses/IdempotencyConflict"
+
+  /api/v1/comparison-runs/{comparisonGroupId}:
+    get:
+      tags: [Runs]
+      operationId: getComparisonRun
+      parameters:
+        - name: comparisonGroupId
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/Uuid" }
+      responses:
+        "200":
+          description: 配对 Run 与两侧固化版本
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ComparisonRun" }
+    post:
+      tags: [Reports]
+      operationId: diagnoseReport
+      parameters:
+        - $ref: "#/components/parameters/ReportId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiagnosisRequest"
+      responses:
+        "200":
+          description: 带证据引用的 AI 建议
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RestResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AiDiagnosis"
+        "503":
+          description: Provider 不可用；确定性报告仍有效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Uuid"
+    TestJobId:
+      name: testJobId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Uuid"
+    TargetId:
+      name: targetId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Uuid"
+    CaseId:
+      name: caseId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Uuid"
+    SuiteId:
+      name: suiteId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Uuid"
+    WorkflowId:
+      name: workflowId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Uuid"
+    RunId:
+      name: runId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Uuid"
+    AttemptId:
+      name: attemptId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Uuid"
+    ReportId:
+      name: reportId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Uuid"
+    WorkerId:
+      name: workerId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+
+  responses:
+    ProjectCreated:
+      description: 项目已创建
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/RestResponse"
+              - type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Project"
+    ResourceCreated:
+      description: 资源已创建
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/RestResponse"
+              - type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ResourceIdentity"
+    Accepted:
+      description: 操作已接受
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RestResponse"
+    ValidationError:
+      description: 字段或状态输入非法
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    IdempotencyConflict:
+      description: 相同幂等键对应不同内容
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    StateConflict:
+      description: 状态或版本已变化
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    LeaseExpired:
+      description: 租约失效或 Attempt 已被替代
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    Uuid:
+      type: string
+      format: uuid
+    RestResponse:
+      type: object
+      required: [code, message, traceId]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        traceId:
+          type: string
+          pattern: "^[a-f0-9]{32}$"
+        data: {}
+    ErrorResponse:
+      allOf:
+        - $ref: "#/components/schemas/RestResponse"
+        - type: object
+          required: [code, message, traceId]
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+                - RESOURCE_NOT_FOUND
+                - IDEMPOTENCY_CONFLICT
+                - STATE_CONFLICT
+                - LEASE_EXPIRED
+                - CONCURRENCY_LIMITED
+                - DISPATCH_UNAVAILABLE
+                - AI_PROVIDER_UNAVAILABLE
+                - TARGET_SOURCE_NOT_CONFIGURED
+                - REVISION_NOT_FOUND
+                - REVISION_RESOLUTION_FAILED
+                - REVISION_RESOLUTION_TIMEOUT
+            details:
+              type: object
+              additionalProperties: true
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [UP, DEGRADED]
+        components:
+          type: object
+          additionalProperties:
+            type: string
+    ResourceIdentity:
+      type: object
+      required: [id]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        version:
+          type: integer
+          minimum: 1
+    IdempotentRequest:
+      type: object
+      additionalProperties: false
+      required: [requestKey]
+      properties:
+        requestKey:
+          $ref: "#/components/schemas/Uuid"
+    TaskRevisionOverride:
+      type: object
+      additionalProperties: false
+      required: [workflowNodeId, revision]
+      properties:
+        workflowNodeId:
+          $ref: "#/components/schemas/Uuid"
+        revision:
+          $ref: "#/components/schemas/RevisionSelector"
+    CreateProjectRequest:
+      type: object
+      additionalProperties: false
+      required: [name, repositoryUrl, defaultBranch]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        code:
+          type: string
+          maxLength: 63
+          deprecated: true
+          description: 兼容旧客户端的内部标识；新客户端省略，由服务端使用 Project UUID 自动生成。
+        targetType:
+          type: string
+          enum: [HTTP_SERVICE, WEB, DESKTOP, MOBILE]
+          deprecated: true
+          description: 旧版兼容字段；目标平台由测试任务和工作流的资源要求表达。
+        repositoryUrl: { type: string, maxLength: 2048 }
+        defaultBranch: { type: string, maxLength: 255 }
+        ciProvider: { type: string, enum: [JENKINS], deprecated: true, description: 旧版兼容字段；由平台级 CI Connection 配置。 }
+        ciServerUrl: { type: string, format: uri, maxLength: 2048, deprecated: true, description: 旧版兼容字段；由平台级 CI Connection 配置。 }
+        ciFolder: { type: [string, "null"], maxLength: 512, deprecated: true, description: 旧版兼容字段；由平台级 CI Connection 配置。 }
+        ciCredentialRef: { type: [string, "null"], maxLength: 255, deprecated: true, description: 旧版兼容字段；由平台级 Secret 配置。 }
+    Project:
+      type: object
+      required: [id, name, code, state, targets]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        name:
+          type: string
+        code:
+          type: string
+        state:
+          type: string
+          enum: [ACTIVE, ARCHIVED]
+        targetType: { type: string, enum: [HTTP_SERVICE, WEB, DESKTOP, MOBILE] }
+        repositoryUrl: { type: [string, "null"] }
+        defaultBranch: { type: [string, "null"] }
+        ciProvider: { type: [string, "null"] }
+        ciServerUrl: { type: [string, "null"] }
+        ciFolder: { type: [string, "null"] }
+        ciCredentialRef: { type: [string, "null"] }
+        targets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Target"
+    SaveTestJobRequest:
+      type: object
+      additionalProperties: false
+      required: [projectId, name, workflowId, revisionType, platform, priority, configVersion]
+      properties:
+        projectId: { $ref: "#/components/schemas/Uuid" }
+        code: { type: string, maxLength: 63, deprecated: true, description: "兼容旧调用方；新建时省略并由服务端生成 UUID。" }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: [string, "null"], maxLength: 2000 }
+        workflowId: { $ref: "#/components/schemas/Uuid" }
+        workflowVersion: { type: integer, minimum: 1, deprecated: true, description: "省略时固化 Workflow 最新已发布版本。" }
+        revisionType: { type: string, enum: [DEFAULT_BRANCH, BRANCH, TAG, COMMIT] }
+        revisionValue: { type: [string, "null"], maxLength: 255 }
+        pipelineExternalId: { type: string, minLength: 1, maxLength: 255, deprecated: true, description: "省略时选择 Project 默认已启用 Pipeline。" }
+        platform: { type: string, enum: [WINDOWS, ANDROID, IOS] }
+        priority: { type: integer, enum: [5, 9], description: "5=普通，9=紧急。" }
+        processConcurrency: { type: integer, minimum: 1, maximum: 100, deprecated: true, description: "兼容字段；服务端按系统负载策略覆盖。" }
+        deviceConcurrency: { type: integer, minimum: 1, maximum: 100, deprecated: true, description: "兼容字段；服务端按系统负载策略覆盖。" }
+        configVersion: { type: integer, minimum: 0 }
+    TestJobVersionRequest:
+      type: object
+      additionalProperties: false
+      required: [configVersion]
+      properties:
+        configVersion: { type: integer, minimum: 1 }
+    ComparisonLaunchRequest:
+      type: object
+      additionalProperties: false
+      required: [requestKey, baselineRevision, candidateRevision]
+      properties:
+        requestKey: { $ref: "#/components/schemas/Uuid" }
+        baselineRevision: { $ref: "#/components/schemas/RevisionSelector" }
+        candidateRevision: { $ref: "#/components/schemas/RevisionSelector" }
+    PipelineRef:
+      type: object
+      additionalProperties: false
+      required: [externalId, name, provider, serverUrl, jobName, revision, enabled]
+      properties:
+        externalId: { $ref: "#/components/schemas/Uuid" }
+        name: { type: string }
+        provider: { type: string, enum: [JENKINS] }
+        serverUrl: { type: string, format: uri }
+        jobName: { type: string }
+        revision: { type: string, pattern: "^sha256:[0-9a-f]{64}$" }
+        enabled: { type: boolean }
+    PipelineEnvironmentRef:
+      type: object
+      additionalProperties: false
+      required: [externalId, name, providerKey, platform, resourcePoolKey, capacity]
+      properties:
+        externalId: { type: string }
+        name: { type: string }
+        providerKey: { type: string }
+        platform: { type: string, enum: [WINDOWS, ANDROID, IOS] }
+        resourcePoolKey: { type: string }
+        capacity: { type: integer, minimum: 1 }
+    TestJob:
+      type: object
+      additionalProperties: false
+      required: [id, projectId, code, name, workflowId, workflowVersion, workflowChecksum,
+                 revisionType, pipelineExternalId, platform, priority,
+                 processConcurrency, deviceConcurrency, state, configVersion, version,
+                 createdAt, updatedAt]
+      properties:
+        id: { $ref: "#/components/schemas/Uuid" }
+        projectId: { $ref: "#/components/schemas/Uuid" }
+        code: { type: string }
+        name: { type: string }
+        description: { type: [string, "null"] }
+        workflowId: { $ref: "#/components/schemas/Uuid" }
+        workflowVersion: { type: integer, minimum: 1 }
+        workflowChecksum: { type: string }
+        revisionType: { type: string, enum: [DEFAULT_BRANCH, BRANCH, TAG, COMMIT] }
+        revisionValue: { type: [string, "null"] }
+        resolvedCommit: { type: [string, "null"], description: "保存草稿时固化的不可变 Commit；历史任务首次执行时补齐。" }
+        commitMessage: { type: [string, "null"], maxLength: 500 }
+        revisionResolvedAt: { type: [string, "null"], format: date-time }
+        pipelineExternalId: { type: string }
+        pipelineName: { type: [string, "null"] }
+        pipelineRevision: { type: [string, "null"] }
+        environmentExternalId: { type: [string, "null"], description: "Legacy field; new jobs use platform-based automatic allocation." }
+        environmentName: { type: [string, "null"] }
+        platform: { type: string, enum: [WINDOWS, ANDROID, IOS] }
+        priority: { type: integer, enum: [5, 9] }
+        processConcurrency: { type: integer, minimum: 1, maximum: 100 }
+        deviceConcurrency: { type: integer, minimum: 1, maximum: 100 }
+        state: { type: string, enum: [DRAFT, ACTIVE, DISABLED] }
+        configVersion: { type: integer, minimum: 1 }
+        version: { type: integer, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    TestTaskExecutionSummary:
+      type: object
+      additionalProperties: false
+      required: [taskId, projectId, projectName, name, code, taskState, attemptCount,
+                 activeAttemptCount, progress, workflowVersion]
+      properties:
+        taskId: { $ref: "#/components/schemas/Uuid" }
+        projectId: { $ref: "#/components/schemas/Uuid" }
+        projectName: { type: string }
+        name: { type: string }
+        code: { type: string }
+        taskState: { type: string, enum: [DRAFT, ACTIVE, DISABLED] }
+        attemptCount: { type: integer, minimum: 0 }
+        activeAttemptCount: { type: integer, minimum: 0, maximum: 1 }
+        currentAttemptId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        currentAttemptState:
+          oneOf:
+            - $ref: "#/components/schemas/RunState"
+            - type: "null"
+        progress: { type: integer, minimum: 0, maximum: 100 }
+        lastExecutedAt: { type: [string, "null"], format: date-time }
+        resolvedCommit: { type: [string, "null"] }
+        commitMessage: { type: [string, "null"] }
+        workflowVersion: { type: integer, minimum: 1 }
+    CreateTargetRequest:
+      type: object
+      additionalProperties: false
+      required: [name, type]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        type:
+          type: string
+          enum: [HTTP_SERVICE, WEB, DESKTOP, MOBILE]
+        repositoryUrl:
+          type: string
+          maxLength: 2048
+        defaultBranch:
+          type: string
+          maxLength: 255
+    Target:
+      type: object
+      additionalProperties: false
+      required: [id, projectId, name, type, environments]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        projectId:
+          $ref: "#/components/schemas/Uuid"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        type:
+          type: string
+          enum: [HTTP_SERVICE, WEB, DESKTOP, MOBILE]
+        repositoryUrl:
+          type: string
+          maxLength: 2048
+          nullable: true
+        defaultBranch:
+          type: string
+          maxLength: 255
+          nullable: true
+        environments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Environment"
+    RevisionSelector:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [DEFAULT_BRANCH, BRANCH, TAG, COMMIT]
+        value:
+          type: string
+          maxLength: 255
+          nullable: true
+    ResolvedRevision:
+      type: object
+      additionalProperties: false
+      required: [requestedType, commitSha, resolvedAt]
+      properties:
+        requestedType:
+          type: string
+          enum: [DEFAULT_BRANCH, BRANCH, TAG, COMMIT]
+        requestedValue:
+          type: string
+          nullable: true
+        commitSha:
+          type: string
+          pattern: "^[0-9a-f]{40}$"
+        resolvedAt:
+          type: string
+          format: date-time
+    RevisionOption:
+      type: object
+      additionalProperties: false
+      required: [type, name, commitSha, commitMessage, committedAt, defaultBranch]
+      properties:
+        type: { type: string, enum: [BRANCH, TAG] }
+        name: { type: string, maxLength: 255 }
+        commitSha: { type: string, pattern: "^[0-9a-f]{40}$" }
+        commitMessage: { type: string }
+        committedAt: { type: string, format: date-time }
+        defaultBranch: { type: boolean }
+    TaskTargetRevision:
+      type: object
+      additionalProperties: false
+      required: [repositoryUrl, requestedType, resolvedCommit, resolvedAt]
+      properties:
+        repositoryUrl:
+          type: string
+          maxLength: 2048
+        requestedType:
+          type: string
+          enum: [DEFAULT_BRANCH, BRANCH, TAG, COMMIT]
+        requestedValue:
+          type: [string, "null"]
+        resolvedCommit:
+          type: string
+          pattern: "^[0-9a-f]{40}$"
+        resolvedAt:
+          type: string
+          format: date-time
+    CreateEnvironmentRequest:
+      type: object
+      additionalProperties: false
+      required: [name, providerEnvironmentKey, platform, resourcePoolKey, capacity, enabled, initializeOnNextDeploy, config, secretRefs]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        endpoint:
+          type: [string, "null"]
+          format: uri
+        providerEnvironmentKey:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._/-]{0,254}$"
+        platform:
+          type: string
+          enum: [WINDOWS, ANDROID, IOS]
+        resourcePoolKey:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$"
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 1
+          description: One environment represents one independently leasable machine.
+        enabled:
+          type: boolean
+        initializeOnNextDeploy:
+          type: boolean
+        config:
+          type: object
+          additionalProperties: true
+        secretRefs:
+          type: object
+          additionalProperties:
+            type: string
+    Environment:
+      type: object
+      additionalProperties: false
+      required: [id, name, providerEnvironmentKey, platform, resourcePoolKey, capacity, enabled, initializeOnNextDeploy, config, secretRefs]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        targetId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        endpoint:
+          type: [string, "null"]
+          format: uri
+        providerEnvironmentKey:
+          type: string
+        platform:
+          type: string
+          enum: [WINDOWS, ANDROID, IOS]
+        resourcePoolKey:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 1
+        enabled:
+          type: boolean
+        initializeOnNextDeploy:
+          type: boolean
+        config:
+          type: object
+          additionalProperties: true
+        secretRefs:
+          type: object
+          additionalProperties:
+            type: string
+    EnvironmentRuntimeStatus:
+      type: object
+      additionalProperties: false
+      required: [environmentId, provider, state, controllable, message]
+      properties:
+        environmentId:
+          $ref: "#/components/schemas/Uuid"
+        provider:
+          type: string
+          enum: [HYPER_V, EXTERNAL]
+        state:
+          type: string
+          enum: [RUNNING, STOPPED, SAVED, PAUSED, UNMANAGED, UNKNOWN, ERROR]
+        controllable:
+          type: boolean
+        message:
+          type: string
+    CreateCaseRequest:
+      type: object
+      additionalProperties: false
+      required: [name, kind, parameters, timeoutSeconds]
+      properties:
+        targetId:
+          $ref: "#/components/schemas/Uuid"
+          description: 兼容字段；项目 Case 省略时由服务端解析当前项目主 Target。
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        kind:
+          type: string
+          enum: [ASSERTION, FIXTURE]
+        scope:
+          type: string
+          enum: [PROJECT, SHARED]
+          default: PROJECT
+        parameters:
+          type: object
+          additionalProperties: true
+        tags:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+        timeoutSeconds:
+          type: integer
+          minimum: 1
+          maximum: 86400
+        executionRequirement:
+          $ref: "#/components/schemas/ExecutionRequirement"
+          description: Case 级资源声明；旧客户端省略时按脚本 runner 推导兼容默认值。
+    ExecutionRequirement:
+      type: object
+      additionalProperties: false
+      required: [executorType, interaction, capabilities, resourceProfile, leaseScope]
+      properties:
+        executorType:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: 执行器类型，当前必须与不可变脚本版本的 runner 一致。
+        interaction:
+          type: string
+          enum: [HEADLESS, UI]
+        capabilities:
+          type: array
+          uniqueItems: true
+          maxItems: 32
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+        resourceProfile:
+          type: string
+          minLength: 1
+          maxLength: 64
+        leaseScope:
+          type: string
+          enum: [CASE, SUBFLOW]
+          default: CASE
+        sessionKey:
+          type: [string, "null"]
+          maxLength: 128
+          description: 仅 SUBFLOW 租约使用，用于显式共享同一 UI 会话。
+    CreateScriptVersionRequest:
+      type: object
+      additionalProperties: false
+      required: [runner, sourceRef, checksum]
+      properties:
+        runner:
+          type: string
+          enum: [pytest-http, playwright-web, airtest]
+        sourceRef:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        checksum:
+          type: string
+          pattern: "^sha256:[a-f0-9]{64}$"
+    CreateSuiteRequest:
+      type: object
+      additionalProperties: false
+      required: [targetId, name, caseIds, tags, parameterBindings]
+      properties:
+        targetId:
+          $ref: "#/components/schemas/Uuid"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        caseIds:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            $ref: "#/components/schemas/Uuid"
+        tags:
+          type: array
+          maxItems: 32
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+        parameterBindings:
+          type: object
+          maxProperties: 100
+          additionalProperties: true
+    UpdateSuiteRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, name, caseIds, tags, parameterBindings]
+      properties:
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        caseIds:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            $ref: "#/components/schemas/Uuid"
+        tags:
+          type: array
+          maxItems: 32
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+        parameterBindings:
+          type: object
+          maxProperties: 100
+          additionalProperties: true
+    TestCase:
+      type: object
+      required: [id, projectId, targetId, name, kind, scope, tags, parameters, timeoutSeconds, createdAt, updatedAt, executionRequirement]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        projectId:
+          $ref: "#/components/schemas/Uuid"
+        targetId:
+          $ref: "#/components/schemas/Uuid"
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [ASSERTION, FIXTURE]
+        scope:
+          type: string
+          enum: [PROJECT, SHARED]
+        tags:
+          type: array
+          items:
+            type: string
+        parameters:
+          type: object
+          additionalProperties: true
+        timeoutSeconds:
+          type: integer
+        scriptVersionId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        executionRequirement:
+          $ref: "#/components/schemas/ExecutionRequirement"
+        yamlManaged:
+          type: boolean
+        definitionDigest:
+          type: [string, "null"]
+          pattern: "^sha256:[a-f0-9]{64}$"
+    CaseDefinitionRequest:
+      type: object
+      required: [yaml]
+      properties:
+        yaml:
+          type: string
+          minLength: 1
+    CaseDefinition:
+      type: object
+      required: [projectId, valid, yaml, digest, name, kind, tags, parameters, timeoutSeconds, executionRequirement, sourceRef, entrypoint, checksum]
+      properties:
+        caseId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        projectId:
+          $ref: "#/components/schemas/Uuid"
+        valid:
+          type: boolean
+        yaml:
+          type: string
+        digest:
+          type: string
+          pattern: "^sha256:[a-f0-9]{64}$"
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [ASSERTION, FIXTURE]
+        tags:
+          type: array
+          items:
+            type: string
+        parameters:
+          type: object
+          additionalProperties: true
+        timeoutSeconds:
+          type: integer
+        executionRequirement:
+          $ref: "#/components/schemas/ExecutionRequirement"
+        assetId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        sourceRef:
+          type: string
+        entrypoint:
+          type: string
+        checksum:
+          type: string
+          pattern: "^sha256:[a-f0-9]{64}$"
+    CaseAsset:
+      type: object
+      required: [id, projectId, fileName, contentType, sizeBytes, sha256, uri, entrypoints, yamlSnippet, createdAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        projectId:
+          $ref: "#/components/schemas/Uuid"
+        fileName:
+          type: string
+        contentType:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
+        sha256:
+          type: string
+          pattern: "^sha256:[a-f0-9]{64}$"
+        uri:
+          type: string
+          pattern: "^testforge://assets/"
+        entrypoints:
+          type: array
+          description: 平台识别出的唯一主执行入口；ZIP 文件名本身永远不是入口，辅助文件不计入入口。
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+        yamlSnippet:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ScriptVersion:
+      type: object
+      required: [id, caseId, runner, sourceRef, checksum, version, createdAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        caseId:
+          $ref: "#/components/schemas/Uuid"
+        runner:
+          type: string
+          enum: [pytest-http, playwright-web, airtest]
+        sourceRef:
+          type: string
+        checksum:
+          type: string
+          pattern: "^sha256:[a-f0-9]{64}$"
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+    TestSuite:
+      type: object
+      required: [id, projectId, targetId, name, caseIds, tags, parameterBindings, version, createdAt, updatedAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        projectId:
+          $ref: "#/components/schemas/Uuid"
+        targetId:
+          $ref: "#/components/schemas/Uuid"
+        name:
+          type: string
+        caseIds:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/Uuid"
+        tags:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+        parameterBindings:
+          type: object
+          additionalProperties: true
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateWorkflowRequest:
+      type: object
+      additionalProperties: false
+      required: [targetId, name]
+      properties:
+        targetId:
+          $ref: "#/components/schemas/Uuid"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+    WorkflowGraphRequest:
+      allOf:
+        - $ref: "#/components/schemas/WorkflowGraph"
+        - type: object
+          required: [expectedVersion]
+          properties:
+            expectedVersion:
+              type: integer
+              minimum: 0
+    WorkflowGraph:
+      type: object
+      required: [nodes, edges]
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkflowNode"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkflowEdge"
+    WorkflowNode:
+      type: object
+      additionalProperties: false
+      required: [id, type, referenceId, referenceVersion, required, positionX, positionY]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        type:
+          type: string
+          enum: [CASE, SUITE, FIXTURE, SUBFLOW]
+        referenceId:
+          $ref: "#/components/schemas/Uuid"
+        referenceVersion:
+          type: integer
+          minimum: 1
+        required:
+          type: boolean
+        timeoutSeconds:
+          type: integer
+          minimum: 1
+          maximum: 86400
+        parameterOverrides:
+          type: object
+          additionalProperties: true
+        positionX:
+          type: number
+        positionY:
+          type: number
+    WorkflowEdge:
+      type: object
+      additionalProperties: false
+      required: [predecessorNodeId, successorNodeId, condition]
+      properties:
+        predecessorNodeId:
+          $ref: "#/components/schemas/Uuid"
+        successorNodeId:
+          $ref: "#/components/schemas/Uuid"
+        condition:
+          type: string
+          enum: [ON_SUCCESS, ON_COMPLETION]
+    CreateRunRequest:
+      type: object
+      additionalProperties: false
+      required: [projectId, targetId, environmentId, workflowId, workflowVersion, priority, maxConcurrency, requestKey]
+      properties:
+        projectId:
+          $ref: "#/components/schemas/Uuid"
+        targetId:
+          $ref: "#/components/schemas/Uuid"
+        environmentId:
+          $ref: "#/components/schemas/Uuid"
+        workflowId:
+          $ref: "#/components/schemas/Uuid"
+        workflowVersion:
+          type: integer
+          minimum: 1
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 9
+        maxConcurrency:
+          type: integer
+          minimum: 1
+          maximum: 20
+        processConcurrency:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: PROCESS_POOL 独立并发上限；省略时继承 maxConcurrency。
+        deviceConcurrency:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: EXCLUSIVE_DEVICE 独立并发上限；省略时继承 maxConcurrency。
+        requestKey:
+          $ref: "#/components/schemas/Uuid"
+        targetRevision:
+          $ref: "#/components/schemas/RevisionSelector"
+        taskRevisionOverrides:
+          type: array
+          default: []
+          items:
+            $ref: "#/components/schemas/TaskRevisionOverride"
+        deploymentProfileId:
+          $ref: "#/components/schemas/Uuid"
+          description: 指定后，Run 的 Task 在该 Commit 部署 READY 前保持 WAITING_DEPLOYMENT。
+    CreateComparisonRunRequest:
+      type: object
+      additionalProperties: false
+      required: [projectId, targetId, environmentId, workflowId, workflowVersion, priority, maxConcurrency, requestKey, baselineRevision, candidateRevision]
+      properties:
+        projectId: { $ref: "#/components/schemas/Uuid" }
+        targetId: { $ref: "#/components/schemas/Uuid" }
+        environmentId: { $ref: "#/components/schemas/Uuid" }
+        workflowId: { $ref: "#/components/schemas/Uuid" }
+        workflowVersion: { type: integer, minimum: 1 }
+        priority: { type: integer, minimum: 0, maximum: 9 }
+        maxConcurrency: { type: integer, minimum: 1, maximum: 20 }
+        processConcurrency: { type: integer, minimum: 1, maximum: 100 }
+        deviceConcurrency: { type: integer, minimum: 1, maximum: 100 }
+        requestKey: { $ref: "#/components/schemas/Uuid" }
+        baselineRevision: { $ref: "#/components/schemas/RevisionSelector" }
+        candidateRevision: { $ref: "#/components/schemas/RevisionSelector" }
+        deploymentProfileId: { $ref: "#/components/schemas/Uuid" }
+    ComparisonRun:
+      type: object
+      required: [id, requestKey, baselineRun, candidateRun, baselineResolvedCommit, candidateResolvedCommit, createdAt]
+      properties:
+        id: { $ref: "#/components/schemas/Uuid" }
+        requestKey: { $ref: "#/components/schemas/Uuid" }
+        baselineRun: { $ref: "#/components/schemas/RunSummary" }
+        candidateRun: { $ref: "#/components/schemas/RunSummary" }
+        baselineResolvedCommit: { type: string, pattern: "^[0-9a-fA-F]{40}$" }
+        candidateResolvedCommit: { type: string, pattern: "^[0-9a-fA-F]{40}$" }
+        createdAt: { type: string, format: date-time }
+    CreateDeploymentProfileRequest:
+      type: object
+      additionalProperties: false
+      required: [name, serverUrl, jobName, buildConfigDigest, maxConcurrency, ttlSeconds]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 128 }
+        serverUrl: { type: string, format: uri, maxLength: 2048 }
+        jobName: { type: string, minLength: 1, maxLength: 512 }
+        credentialRef:
+          type: [string, "null"]
+          maxLength: 128
+          description: 只保存本机或密钥系统中的引用，不保存 Jenkins Token。
+        buildConfigDigest:
+          type: string
+          pattern: "^sha256:[0-9a-f]{64}$"
+        maxConcurrency: { type: integer, minimum: 1, maximum: 50 }
+        ttlSeconds: { type: integer, minimum: 60, maximum: 604800 }
+    PrepareDeploymentRequest:
+      type: object
+      additionalProperties: false
+      required: [profileId, resolvedCommit]
+      properties:
+        profileId: { $ref: "#/components/schemas/Uuid" }
+        resolvedCommit:
+          type: string
+          pattern: "^[0-9a-fA-F]{40}$"
+    DeploymentState:
+      type: string
+      enum: [PENDING, TRIGGERED, BUILDING, READY, FAILED, EXPIRED]
+    JenkinsDeploymentCallbackRequest:
+      type: object
+      additionalProperties: false
+      required: [callbackKey, providerRunId, status]
+      properties:
+        callbackKey: { $ref: "#/components/schemas/Uuid" }
+        providerRunId: { type: string, minLength: 1, maxLength: 2048 }
+        status: { $ref: "#/components/schemas/DeploymentState" }
+        endpoint: { type: [string, "null"], maxLength: 2048 }
+        artifactUri: { type: [string, "null"], maxLength: 2048 }
+        artifactDigest: { type: [string, "null"], maxLength: 255 }
+        summary: { type: [string, "null"], maxLength: 1000 }
+    CancelRunRequest:
+      type: object
+      additionalProperties: false
+      required: [requestKey, reason]
+      properties:
+        requestKey:
+          $ref: "#/components/schemas/Uuid"
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+    RunState:
+      type: string
+      enum: [QUEUED, RUNNING, CANCELLING, SUCCEEDED, FAILED, COMPLETED_WITH_WARNINGS, CANCELLED]
+    TaskState:
+      type: string
+      enum: [CREATED, WAITING_DEPLOYMENT, WAITING_DEPENDENCY, QUEUED, DISPATCHED, RUNNING, SUCCEEDED, FAILED, TIMEOUT, BLOCKED, CANCELLED]
+    ExecutionEvent:
+      type: object
+      required: [id, eventKey, runId, type, occurredAt, payload]
+      properties:
+        id:
+          type: integer
+          format: int64
+        eventKey:
+          $ref: "#/components/schemas/Uuid"
+        runId:
+          $ref: "#/components/schemas/Uuid"
+        taskId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        attemptId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        type:
+          type: string
+          pattern: "^[A-Z][A-Z0-9_]{1,63}$"
+        occurredAt:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+    ExecutionEventHistory:
+      type: object
+      required: [events, nextEventId]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExecutionEvent"
+        nextEventId:
+          type: integer
+          format: int64
+          minimum: 0
+    DispatchTelemetrySnapshot:
+      type: object
+      required: [published, paused, redisUnavailable, redeliveries, recoveries]
+      properties:
+        published: { type: integer, format: int64 }
+        paused: { type: integer, format: int64 }
+        redisUnavailable: { type: integer, format: int64 }
+        redeliveries: { type: integer, format: int64 }
+        recoveries: { type: integer, format: int64 }
+        lastObservation:
+          type: [object, "null"]
+          additionalProperties: true
+    PlatformResourceSnapshot:
+      type: object
+      required: [processQueued, processRunning, processCapacity, deviceQueued, deviceRunning, deviceCapacity, deviceAvailable, onlineWorkers, dispatch]
+      properties:
+        processQueued: { type: integer, format: int64 }
+        processRunning: { type: integer, format: int64 }
+        processCapacity: { type: integer, format: int64 }
+        deviceQueued: { type: integer, format: int64 }
+        deviceRunning: { type: integer, format: int64 }
+        deviceCapacity: { type: integer, format: int64 }
+        deviceAvailable: { type: integer, format: int64 }
+        onlineWorkers: { type: integer, format: int64 }
+        dispatch:
+          $ref: "#/components/schemas/DispatchTelemetrySnapshot"
+    RunComparisonReport:
+      type: object
+      required: [baselineRunId, candidateRunId, summary, cases]
+      properties:
+        baselineRunId: { $ref: "#/components/schemas/Uuid" }
+        candidateRunId: { $ref: "#/components/schemas/Uuid" }
+        baselineRevision:
+          oneOf:
+            - $ref: "#/components/schemas/TaskTargetRevision"
+            - type: "null"
+        candidateRevision:
+          oneOf:
+            - $ref: "#/components/schemas/TaskTargetRevision"
+            - type: "null"
+        summary:
+          type: object
+          required: [regressions, fixed, bothPass, bothFail, notComparable]
+          properties:
+            regressions: { type: integer, format: int64 }
+            fixed: { type: integer, format: int64 }
+            bothPass: { type: integer, format: int64 }
+            bothFail: { type: integer, format: int64 }
+            notComparable: { type: integer, format: int64 }
+        cases:
+          type: array
+          items:
+            type: object
+            required: [caseId, occurrence, baselineOutcome, candidateOutcome, conclusion]
+            properties:
+              caseId: { $ref: "#/components/schemas/Uuid" }
+              occurrence: { type: integer, minimum: 1 }
+              baselineTaskId:
+                oneOf:
+                  - $ref: "#/components/schemas/Uuid"
+                  - type: "null"
+              candidateTaskId:
+                oneOf:
+                  - $ref: "#/components/schemas/Uuid"
+                  - type: "null"
+              baselineOutcome: { type: string, enum: [PASS, FAIL, UNAVAILABLE] }
+              candidateOutcome: { type: string, enum: [PASS, FAIL, UNAVAILABLE] }
+              conclusion: { type: string, enum: [REGRESSION, FIXED, BOTH_PASS, BOTH_FAIL, NOT_COMPARABLE] }
+    RunSummary:
+      type: object
+      required: [id, state, totalTasks, taskCounts, createdAt]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        comparisonGroupId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        testJobId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        jobConfigVersion:
+          type: integer
+          minimum: 0
+        state:
+          $ref: "#/components/schemas/RunState"
+        totalTasks:
+          type: integer
+          minimum: 0
+        taskCounts:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: [string, "null"]
+          format: date-time
+    RunGraph:
+      type: object
+      required: [runId, workflowId, workflowVersion, compiledFallback, nodes, edges]
+      properties:
+        runId:
+          $ref: "#/components/schemas/Uuid"
+        testJobId:
+          oneOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        workflowId: { $ref: "#/components/schemas/Uuid" }
+        workflowVersion: { type: integer, minimum: 1 }
+        compiledFallback: { type: boolean }
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/RunGraphNode"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/RunGraphEdge"
+    RunGraphEdge:
+      type: object
+      additionalProperties: false
+      required: [sourceNodeId, targetNodeId, condition]
+      properties:
+        sourceNodeId: { $ref: "#/components/schemas/Uuid" }
+        targetNodeId: { $ref: "#/components/schemas/Uuid" }
+        condition: { type: string, enum: [ON_SUCCESS, ON_COMPLETION] }
+    RunGraphNode:
+      type: object
+      additionalProperties: false
+      required: [id, type, label, positionX, positionY, state, taskIds, totalTasks, completedTasks]
+      properties:
+        id:
+          $ref: "#/components/schemas/Uuid"
+        type:
+          type: string
+          enum: [CASE, SUITE, FIXTURE, SUBFLOW]
+        label: { type: string }
+        positionX:
+          type: number
+        positionY:
+          type: number
+        taskIds:
+          type: array
+          items: { $ref: "#/components/schemas/Uuid" }
+        totalTasks: { type: integer, minimum: 0 }
+        completedTasks: { type: integer, minimum: 0 }
+        state:
+          type: string
+          enum: [EMPTY, QUEUED, RUNNING, SUCCEEDED, FAILED, BLOCKED]
+    RegisterWorkerRequest:
+      type: object
+      additionalProperties: false
+      required: [workerId, protocolVersion, capabilities, maxConcurrency]
+      properties:
+        workerId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        protocolVersion:
+          type: string
+          pattern: "^1\\.[0-9]+$"
+        capabilities:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            pattern: "^[A-Z][A-Z0-9_]{0,63}$"
+        maxConcurrency:
+          type: integer
+          minimum: 1
+          maximum: 128
+    UpsertDeviceRequest:
+      type: object
+      additionalProperties: false
+      required: [deviceId, platform, deviceUri, features, resolution]
+      properties:
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        platform:
+          type: string
+          enum: [WINDOWS, ANDROID, IOS]
+        deviceUri:
+          type: string
+          minLength: 1
+          maxLength: 512
+        features:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+        resolution:
+          type: object
+          additionalProperties: false
+          required: [width, height]
+          properties:
+            width:
+              type: integer
+              minimum: 1
+            height:
+              type: integer
+              minimum: 1
+    AttemptLeaseRequest:
+      type: object
+      additionalProperties: false
+      required: [workerId, leaseToken]
+      properties:
+        workerId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        leaseToken:
+          $ref: "#/components/schemas/Uuid"
+    AttemptHeartbeatRequest:
+      type: object
+      additionalProperties: false
+      required: [workerId, leaseToken, progress, at]
+      properties:
+        workerId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        leaseToken:
+          $ref: "#/components/schemas/Uuid"
+        progress:
+          type: number
+          minimum: 0
+          maximum: 1
+        at:
+          type: string
+          format: date-time
+    ArtifactUploadPolicyRequest:
+      type: object
+      additionalProperties: false
+      required: [workerId, leaseToken, objectKey, mediaType, sizeBytes, sha256]
+      properties:
+        workerId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        leaseToken:
+          $ref: "#/components/schemas/Uuid"
+        objectKey:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          description: 平台附件根目录下的相对键，必须归属当前 Attempt。
+        mediaType:
+          type: string
+          minLength: 1
+          maxLength: 255
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 0
+        sha256:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+    ArtifactUploadPolicy:
+      type: object
+      required: [uploadUrl, objectKey, expiresAt, fields]
+      properties:
+        uploadUrl:
+          type: string
+          format: uri
+        objectKey:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+          description: Worker 原样提交给 OSS multipart/form-data 的短期签名字段。
+    CallbackReceipt:
+      type: object
+      required: [attemptId, callbackKey, disposition, originalDisposition, receivedAt]
+      properties:
+        attemptId:
+          $ref: "#/components/schemas/Uuid"
+        callbackKey:
+          $ref: "#/components/schemas/Uuid"
+        disposition:
+          type: string
+          enum: [ACCEPTED, DUPLICATE, STALE]
+          description: 本次请求的处理分类；幂等重放时为 DUPLICATE。
+        originalDisposition:
+          type: string
+          enum: [ACCEPTED, STALE]
+          description: 首次处理该幂等键时保存的结果分类。
+        taskId:
+          anyOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+          description: 首次回调被接受时完成的 Task；STALE 时为 null。
+        resultStatus:
+          anyOf:
+            - type: string
+              enum: [PASSED, ASSERTION_FAILED, INFRA_FAILED, CANCELLED]
+            - type: "null"
+          description: 首次回调被接受后的有效结果；STALE 时为 null。
+        reason:
+          type: [string, "null"]
+          enum: [STALE_CALLBACK, null]
+          description: 首次处理被拒绝时的稳定原因码。
+        receivedAt:
+          type: string
+          format: date-time
+          description: 首次处理该幂等键的时间，重复回调不会改变。
+    RunReport:
+      type: object
+      required: [runId, runState, total, passed, failed, pending, durationMs, p50DurationMs, p95DurationMs, failureCategories, results, artifactKeys]
+      properties:
+        runId:
+          $ref: "#/components/schemas/Uuid"
+        runState:
+          $ref: "#/components/schemas/RunState"
+        total: { type: integer, minimum: 0 }
+        passed: { type: integer, minimum: 0 }
+        failed: { type: integer, minimum: 0 }
+        pending: { type: integer, minimum: 0 }
+        durationMs: { type: integer, format: int64, minimum: 0 }
+        p50DurationMs:
+          type: integer
+          minimum: 0
+        p95DurationMs:
+          type: integer
+          minimum: 0
+        failureCategories:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/RunReportResult"
+        artifactKeys:
+          type: array
+          items: { type: string }
+    RunReportResult:
+      type: object
+      required: [taskId, caseId, attemptId, status, durationMs, summary, artifactKeys, targetRevision]
+      properties:
+        taskId: { $ref: "#/components/schemas/Uuid" }
+        caseId: { $ref: "#/components/schemas/Uuid" }
+        attemptId: { $ref: "#/components/schemas/Uuid" }
+        status: { type: string, enum: [PASSED, ASSERTION_FAILED, INFRA_FAILED, CANCELLED] }
+        durationMs: { type: integer, format: int64, minimum: 0 }
+        failureType: { type: [string, "null"] }
+        summary: { type: string }
+        artifactKeys:
+          type: array
+          items: { type: string }
+        targetRevision:
+          oneOf:
+            - $ref: "#/components/schemas/TaskTargetRevision"
+            - type: "null"
+    DeviceSlotPanel:
+      type: object
+      required: [slotId, workerId, deviceId, platform, features, status, leaseState, lastHeartbeatAt, expiresAt]
+      properties:
+        slotId: { $ref: "#/components/schemas/Uuid" }
+        workerId: { type: string }
+        deviceId: { type: string }
+        platform: { type: string }
+        features:
+          type: array
+          items: { type: string }
+        status: { type: string, enum: [AVAILABLE, RESERVED, OFFLINE] }
+        leaseState: { type: string, enum: [AVAILABLE, RESERVED] }
+        currentAttemptId:
+          anyOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type: "null"
+        leaseUntil: { type: [string, "null"], format: date-time }
+        lastHeartbeatAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+    AiDiagnosisStatus:
+      type: object
+      required: [runId, available, status, message, provider, model, reasoningEffort]
+      properties:
+        runId: { $ref: "#/components/schemas/Uuid" }
+        available: { type: boolean }
+        status: { type: string, enum: [AVAILABLE, UNAVAILABLE] }
+        message: { type: string }
+        provider: { type: string, example: codex-cli }
+        model: { type: string, example: gpt-5.6-luna }
+        reasoningEffort: { type: string, example: high }
+    CaseHistory:
+      type: object
+      required: [caseId, sampleSize, sufficientData, flaky, statusTransitions, recentResults]
+      properties:
+        caseId:
+          $ref: "#/components/schemas/Uuid"
+        sampleSize:
+          type: integer
+          minimum: 0
+          maximum: 10
+        sufficientData:
+          type: boolean
+        flaky:
+          type: boolean
+        statusTransitions:
+          type: integer
+          minimum: 0
+        latestFailureType:
+          type: [string, "null"]
+        recentResults:
+          type: array
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/CaseHistoryItem"
+    CaseHistoryItem:
+      type: object
+      required: [recordedAt, runId, taskId, attemptId, finalStatus, durationMs]
+      properties:
+        recordedAt:
+          type: string
+          format: date-time
+        runId:
+          $ref: "#/components/schemas/Uuid"
+        taskId:
+          $ref: "#/components/schemas/Uuid"
+        attemptId:
+          $ref: "#/components/schemas/Uuid"
+        finalStatus:
+          type: string
+          enum: [PASSED, ASSERTION_FAILED, INFRA_FAILED, CANCELLED]
+        durationMs:
+          type: integer
+          format: int64
+          minimum: 0
+        failureType:
+          type: [string, "null"]
+    DiagnosisRequest:
+      type: object
+      additionalProperties: false
+      required: [requestKey, forceRefresh]
+      properties:
+        requestKey:
+          $ref: "#/components/schemas/Uuid"
+        forceRefresh:
+          type: boolean
+    AiDiagnosis:
+      type: object
+      required: [diagnosisId, reportId, category, confidence, evidence, suggestions, missingEvidence, provider, model, reasoningEffort, reused, generatedAt]
+      description: AI 建议不参与 Run 或 Task 的确定性状态判定。
+      properties:
+        diagnosisId:
+          $ref: "#/components/schemas/Uuid"
+        reportId:
+          $ref: "#/components/schemas/Uuid"
+        category:
+          type: string
+          enum: [PRODUCT_DEFECT, SCRIPT_ERROR, ENVIRONMENT, WORKER_LOST, FLAKY, UNKNOWN]
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        evidence:
+          type: array
+          items:
+            type: object
+            required: [evidenceId, reason]
+            properties:
+              evidenceId:
+                type: string
+              reason:
+                type: string
+        suggestions:
+          type: array
+          items:
+            type: string
+        missingEvidence:
+          type: array
+          items:
+            type: string
+        model:
+          type: string
+        provider:
+          type: string
+        reasoningEffort:
+          type: string
+        reused:
+          type: boolean
+        generatedAt:
+          type: string
+          format: date-time

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "messageId": "40000000-0000-4000-8000-000000000001",
+  "publishedAt": "2026-09-17T14:00:00Z",
+  "deliveryAttempt": 1,
+  "taskId": "50000000-0000-4000-8000-000000000001",
+  "runId": "30000000-0000-4000-8000-000000000001",
+  "attemptId": "20000000-0000-4000-8000-000000000001",
+  "leaseToken": "60000000-0000-4000-8000-000000000001",
+  "workerProtocol": "1.0",
+  "execution": {
+    "projectId": "70000000-0000-4000-8000-000000000001",
+    "targetId": "80000000-0000-4000-8000-000000000001",
+    "workflowNodeId": "90000000-0000-4000-8000-000000000001",
+    "sourceType": "ASSERTION",
+    "sourceRef": "case:login-health",
+    "runner": "pytest-http",
+    "platform": "LINUX",
+    "requiredFeatures": ["HTTP"],
+    "resourceMode": "PROCESS_POOL",
+    "script": {
+      "version": 3,
+      "sourceRef": "s3://testforge-scripts/login-health-v3.zip",
+      "checksum": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "parameters": {
+      "expectedStatus": 200
+    },
+    "environment": {
+      "environmentId": "a0000000-0000-4000-8000-000000000001",
+      "endpoint": "http://127.0.0.1:8090",
+      "config": {
+        "locale": "zh-CN"
+      },
+      "secretRefs": {
+        "apiToken": "secret/testforge/demo-token"
+      }
+    },
+    "timeoutSeconds": 30
+  },
+  "callbacks": {
+    "startUrl": "http://testforge-app:8080/api/v1/attempts/20000000-0000-4000-8000-000000000001/start",
+    "heartbeatUrl": "http://testforge-app:8080/api/v1/attempts/20000000-0000-4000-8000-000000000001/heartbeat",
+    "completeUrl": "http://testforge-app:8080/api/v1/attempts/20000000-0000-4000-8000-000000000001/callback",
+    "artifactUploadUrl": "http://testforge-app:8080/api/v1/attempts/20000000-0000-4000-8000-000000000001/artifacts"
+  },
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}

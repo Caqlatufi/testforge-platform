@@ -1,0 +1,13 @@
+{
+  "contractVersion": "1.0.0",
+  "apiVersion": "v1",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "compatibility": "同一主版本内只允许向后兼容新增；破坏性变更必须新建版本目录",
+  "openapi": "openapi/v1/testforge.yaml",
+  "schemas": [
+    "schemas/v1/artifact.schema.json",
+    "schemas/v1/task-message.schema.json",
+    "schemas/v1/attempt-callback.schema.json",
+    "schemas/v1/domain-event.schema.json"
+  ]
+}

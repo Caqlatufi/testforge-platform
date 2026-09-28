@@ -1,0 +1,23 @@
+meta {
+  name: 03 Execute Test Job
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/test-jobs/{{testJobId}}/execute
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "requestKey": "{{$guid}}"
+  }
+}
+
+tests {
+  test("accepts execution without concurrency fields", function () {
+    expect(res.status).to.be.oneOf([200, 201, 202]);
+  });
+}

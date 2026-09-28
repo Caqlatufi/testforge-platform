@@ -1,0 +1,61 @@
+# This file must be complete when testforge-platform is published as its own repository.
+
+# Build outputs and dependency caches
+.gradle/
+**/build/
+**/target/
+**/bin/
+**/dist/
+**/node_modules/
+**/.venv/
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.coverage
+
+# Go build outputs
+testforge-mcp/build/
+
+# Local secrets and machine-specific runtime configuration
+.env
+.env.*
+!.env.example
+.env.local
+.env.*.local
+**/auth.json
+**/.codex/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+# Runtime state, browser profiles and logs may contain cookies or tokens
+runtime/
+**/chrome-profile*/
+**/playwright-report/
+**/test-results/
+*.log
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# The repository root ignores generic runtime/ directories. This package is a
+# deliberate Worker source boundary and must remain versioned.
+!testforge-worker/testforge_worker/runtime/
+!testforge-worker/testforge_worker/runtime/**
+testforge-worker/testforge_worker/runtime/**/__pycache__/
+testforge-worker/testforge_worker/runtime/**/*.py[cod]
+
+# Local execution and generated acceptance evidence
+.runtime/
+acceptance/evidence/**
+!acceptance/evidence/README.md
+!acceptance/evidence/build_index.py
+!acceptance/evidence/manifest.json
+!acceptance/evidence/index.json

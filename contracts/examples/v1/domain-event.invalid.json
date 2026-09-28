@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1.0.0",
+  "eventId": "c0000000-0000-4000-8000-000000000001",
+  "eventType": "STALE_CALLBACK",
+  "aggregateType": "ATTEMPT",
+  "aggregateId": "20000000-0000-4000-8000-000000000001",
+  "sequence": 0,
+  "occurredAt": "now",
+  "producer": "unknown-module",
+  "traceId": "short",
+  "payload": {}
+}

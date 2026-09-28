@@ -1,0 +1,20 @@
+meta {
+  name: AI Provider Status
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/reports/{{runId}}/diagnosis/status
+  body: none
+  auth: none
+}
+
+tests {
+  test("status endpoint is explicit", function () {
+    expect(res.status).to.equal(200);
+    expect(["AVAILABLE", "UNAVAILABLE"]).to.include(res.body.data.status);
+    expect(res.body.data.model).to.equal("gpt-5.6-luna");
+    expect(res.body.data.reasoningEffort).to.equal("high");
+  });
+}

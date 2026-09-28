@@ -1,0 +1,33 @@
+services:
+  jenkins:
+    build:
+      context: ./jenkins
+    image: testforge/jenkins:lts-jdk21-pipeline
+    container_name: testforge-jenkins
+    restart: unless-stopped
+    environment:
+      JAVA_OPTS: >-
+        -Djenkins.install.runSetupWizard=false
+      TESTFORGE_JENKINS_PUBLIC_URL: ${TESTFORGE_JENKINS_PUBLIC_URL:-http://127.0.0.1:8082/}
+      TESTFORGE_GATEWAY_URL: ${TESTFORGE_GATEWAY_URL:-http://host.docker.internal:8081}
+      TESTFORGE_SCM_MIRROR_URL: ${TESTFORGE_SCM_MIRROR_URL:-}
+      TESTFORGE_BUILD_AGENT_REMOTE_FS: ${TESTFORGE_BUILD_AGENT_REMOTE_FS:-C:\Jenkins\testforge-build}
+      TESTFORGE_WIN_A_REMOTE_FS: ${TESTFORGE_WIN_A_REMOTE_FS:-C:\Jenkins}
+      TESTFORGE_WIN_B_REMOTE_FS: ${TESTFORGE_WIN_B_REMOTE_FS:-C:\Jenkins}
+      SKILL_SANDBOX_DEPLOY_NODES: ${SKILL_SANDBOX_DEPLOY_NODES:-tf-win-a,tf-win-b}
+    ports:
+      - "${TESTFORGE_JENKINS_BIND_ADDRESS:-127.0.0.1}:8082:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - testforge_jenkins_home:/var/jenkins_home
+      - ./jenkins/init.groovy.d:/var/jenkins_home/init.groovy.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/login >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+volumes:
+  testforge_jenkins_home:

@@ -1,0 +1,22 @@
+meta {
+  name: Conflicting Callback
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/attempts/{{attemptId}}/callback
+  body: json
+  auth: none
+}
+
+body:json {
+  {"schemaVersion":"1.0.0","callbackKey":"{{callbackKey}}","attemptId":"{{attemptId}}","leaseToken":"{{leaseToken}}","workerId":"{{workerId}}","status":"FAILED","completedAt":"2026-09-22T04:00:01Z","durationMs":101,"summary":"conflicting payload","failure":{"type":"PRODUCT_DEFECT","message":"conflict","retryable":false,"details":{}},"artifacts":[],"metrics":{}}
+}
+
+tests {
+  test("same callback key with another payload conflicts", function () {
+    expect(res.status).to.equal(409);
+    expect(res.body.code).to.equal("IDEMPOTENCY_CONFLICT");
+  });
+}

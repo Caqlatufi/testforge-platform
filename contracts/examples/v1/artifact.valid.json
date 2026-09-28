@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0.0",
+  "artifactId": "10000000-0000-4000-8000-000000000001",
+  "attemptId": "20000000-0000-4000-8000-000000000001",
+  "type": "JUNIT_XML",
+  "objectKey": "runs/30000000-0000-4000-8000-000000000001/attempts/20000000-0000-4000-8000-000000000001/junit.xml",
+  "mediaType": "application/xml",
+  "sizeBytes": 4217,
+  "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "createdAt": "2026-09-17T14:00:05Z",
+  "metadata": {
+    "runner": "pytest-http"
+  }
+}

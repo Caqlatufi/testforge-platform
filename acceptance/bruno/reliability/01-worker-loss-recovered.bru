@@ -1,0 +1,20 @@
+meta {
+  name: Worker Loss Recovered
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/runs/{{runId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("run recovered to a unique terminal state", function () {
+    expect(res.status).to.equal(200);
+    expect(["SUCCEEDED", "FAILED", "COMPLETED_WITH_WARNINGS"]).to.include(res.body.data.state);
+    const attempts = res.body.data.tasks.flatMap(task => task.attempts);
+    expect(attempts.some(attempt => ["LOST", "ABANDONED", "TIMED_OUT"].includes(attempt.state))).to.equal(true);
+  });
+}

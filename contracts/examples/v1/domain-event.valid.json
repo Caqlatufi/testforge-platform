@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0.0",
+  "eventId": "c0000000-0000-4000-8000-000000000001",
+  "eventType": "attempt.callback.stale",
+  "aggregateType": "ATTEMPT",
+  "aggregateId": "20000000-0000-4000-8000-000000000001",
+  "sequence": 4,
+  "occurredAt": "2026-09-17T14:00:06Z",
+  "producer": "worker-gateway",
+  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "correlationId": "30000000-0000-4000-8000-000000000001",
+  "causationId": "b0000000-0000-4000-8000-000000000001",
+  "payload": {
+    "taskId": "50000000-0000-4000-8000-000000000001",
+    "reason": "LEASE_REPLACED",
+    "accepted": false
+  }
+}
