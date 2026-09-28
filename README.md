@@ -1,6 +1,6 @@
 # TestForge Platform
 
-> 本项目采用 Apache-2.0 许可，供本机自托管开发与测试。后端框架 JAR 已随仓库提供，干净源码副本启动已通过；完整 API/UI/Jenkins/Worker 全链路验收尚未完成，详见[公开准备记录](docs/reference/公开准备记录.md)。
+> 本项目采用 Apache-2.0 许可，供本机自托管开发与测试。后端框架 JAR 已随仓库提供，干净源码副本启动已通过；公开版单 Case 的 UI → Jenkins → Worker → 报告主链路及重复执行已通过，复杂场景仍待验证，详见[公开准备记录](docs/reference/公开准备记录.md)。
 
 测试任务编排与智能质量分析平台。该项目负责 Project、YAML-first Case、Workflow、Test Job、内部执行与 Attempt、Case 级资源调度、结果回调、报告、Flaky 和 AI 诊断。
 
@@ -13,20 +13,53 @@
 - `contracts`：OpenAPI与JSON Schema。
 - `infra`：MySQL、Redis、MinIO和可观测性环境。
 - `acceptance`：平台 API、可靠性验收与 HTTP 测试夹具。
+- [`docs`](docs/README.md)：使用指南、功能设计、开发与验收方案，以及维护者参考。
 
 本项目供每位使用者在自己的电脑上启动测试平台。首次使用从[五分钟快速开始](docs/guides/01-五分钟快速开始.md)进入，完整文档见[docs/README.md](docs/README.md)。本目录按独立公开仓库维护。
 
-## 使用路径
+## 文档目录
 
-| 目标 | 入口 |
+完整索引见 [docs/README.md](docs/README.md)。首次使用先看使用指南；了解实现时，再按功能域查阅设计文档。
+
+### 使用指南
+
+| 文档 | 主要用途 |
 | --- | --- |
-| 启动 API 与 Web Console | [五分钟快速开始](docs/guides/01-五分钟快速开始.md) |
-| 理解当前领域模型 | [核心概念](docs/guides/02-核心概念.md) |
-| 跑通 Jenkins、Worker 与报告 | [端到端演示](docs/guides/03-端到端演示.md) |
-| 配置 AI 客户端 | [TestForge MCP](testforge-mcp/README.md) |
-| 配置服务、Codex 与凭据 | [配置与凭据](docs/guides/05-配置与凭据.md) |
-| 了解安全边界 | [安全策略](SECURITY.md) · [安全设计与审计](docs/reference/安全设计.md) |
-| 录制项目介绍 | [全流程视频脚本](docs/guides/04-项目全流程视频脚本.md) |
+| [五分钟快速开始](docs/guides/01-五分钟快速开始.md) | 准备依赖，启动基础设施、API 和 Web Console |
+| [核心概念](docs/guides/02-核心概念.md) | 理解 Project、Case、Workflow、Test Job、Worker 和报告之间的关系 |
+| [端到端演示](docs/guides/03-端到端演示.md) | 从页面创建测试资产，串联 Jenkins 发布、Worker 执行和报告 |
+| [项目全流程视频脚本](docs/guides/04-项目全流程视频脚本.md) | 按讲解顺序准备演示画面和口播，录制项目介绍时使用 |
+| [配置与凭据](docs/guides/05-配置与凭据.md) | 配置服务连接、环境变量及 AI/MCP 凭据，了解敏感信息存放方式 |
+
+### 功能设计与开发
+
+每个功能目录均包含四份文档：**需求分析**说明做什么、范围是什么；**架构设计**说明模块和数据如何协作；**开发方案**说明具体实现；**验收方案**说明如何验证及通过标准。各份文件的直接链接见 [功能域索引](docs/README.md#功能域索引)。
+
+| 目录 | 主要内容 |
+| --- | --- |
+| [01 · 被测项目与 Jenkins 发布](docs/01-project-delivery/) | 项目登记、Git 版本选择、真实部署及部署回调 |
+| [02 · Case 与脚本资产](docs/02-test-assets/) | YAML Case、脚本上传、资产版本及执行需求 |
+| [03 · 工作流编排](docs/03-workflow-orchestration/) | DAG 节点与依赖、草稿编辑、发布和流程复用 |
+| [04 · 测试任务管理](docs/04-test-job-management/) | 创建任务、冻结 Commit 与 Workflow 版本、确认和重复执行 |
+| [05 · 执行编排与可靠性](docs/05-run-orchestration/) | 任务派发、状态推进、回调幂等、重试、取消与故障恢复 |
+| [06 · 执行资源与调度](docs/06-execution-resources/) | Worker、环境和资源容量，按 Case 需求分配执行资源 |
+| [07 · 结果与可观测性](docs/07-results-observability/) | 结果聚合、报告、事件推送、指标与执行证据 |
+| [08 · AI 证据诊断](docs/08-ai-diagnosis/) | 基于执行证据生成诊断建议，以及失败降级和安全边界 |
+| [09 · 平台工程与交付](docs/09-platform-engineering/) | 控制台、构建、启动、持续集成与平台回归 |
+| [10 · MCP 接入](docs/10-mcp-integration/) | AI 客户端接入、授权工作区和 MCP 工具与平台 API 的边界 |
+
+### 维护者参考
+
+[`docs/reference`](docs/README.md#维护者参考) 用于跨模块的安全、文档维护和发布说明，按需阅读。
+
+| 文档 | 主要用途 |
+| --- | --- |
+| [安全设计](docs/reference/安全设计.md) | 了解信任边界、凭据保护、审计结果与已知安全限制 |
+| [开源发布清单](docs/reference/开源发布清单.md) | 发布前核对许可证、脱敏、依赖和验证状态 |
+| [开源文档体系](docs/reference/开源文档体系.md) | 维护文档时确定内容归属、链接方式和同步更新规则 |
+| [公开准备记录](docs/reference/公开准备记录.md) | 查阅仓库拆分、依赖交付和公开版本验证的过程与结论 |
+
+组件配置另见 [后端](testforge-app/README.md)、[前端](testforge-client/README.md)、[Worker](testforge-worker/README.md)、[MCP](testforge-mcp/README.md)、[基础设施](infra/README.md)和[脚本入口](scripts/README.md)。参与开发见 [贡献指南](CONTRIBUTING.md)，安全问题反馈见 [安全策略](SECURITY.md)。
 
 ## 最小构建
 
