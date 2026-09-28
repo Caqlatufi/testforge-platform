@@ -15,8 +15,10 @@ dependencies {
     implementation project(':ai-diagnosis')
     implementation project(':observability')
 
-    implementation('yhc.framework:simple-migration:1.0.1') { transitive = false }
-    implementation('yhc.framework:commons:1.0.1') { transitive = false }
+    implementation files(
+            rootProject.file('libs/simple-migration-1.0.1.jar'),
+            rootProject.file('libs/commons-1.0.1.jar')
+    )
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'

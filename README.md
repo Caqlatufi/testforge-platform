@@ -1,6 +1,6 @@
 # TestForge Platform
 
-> 公开准备中：当前后端仍依赖尚未公开的 yhc.framework 构件，干净机器启动尚未通过；许可证待确认。请先查看[公开准备记录](docs/reference/公开准备记录.md)。
+> 本项目采用 Apache-2.0 许可，供本机自托管开发与测试。后端框架 JAR 已随仓库提供，干净源码副本启动已通过；完整 API/UI/Jenkins/Worker 全链路验收尚未完成，详见[公开准备记录](docs/reference/公开准备记录.md)。
 
 测试任务编排与智能质量分析平台。该项目负责 Project、YAML-first Case、Workflow、Test Job、内部执行与 Attempt、Case 级资源调度、结果回调、报告、Flaky 和 AI 诊断。
 
@@ -90,3 +90,7 @@ MCP Host 接入方式见 [`testforge-mcp/README.md`](testforge-mcp/README.md)，
 ## 安全提示
 
 AI 诊断默认关闭；启用时必须使用 TestForge 专用 `TESTFORGE_AI_CODEX_HOME`，不要复用或提交个人 Codex Home。控制面当前没有内建用户认证/RBAC，默认仅监听 `127.0.0.1`，不能直接暴露公网。复制 [`.env.example`](.env.example) 到未跟踪的 `.env.local` 后填写自己的数据库、Redis、Jenkins、对象存储和 MCP 配置；完整限制见 [`SECURITY.md`](SECURITY.md)。
+
+## 许可证
+
+平台原创内容及随附的 `commons`、`simple-migration` 自有框架 JAR 采用 [Apache-2.0](LICENSE) 许可。第三方依赖遵循各自许可证；框架 JAR 的说明与校验值见 [testforge-app/libs](testforge-app/libs/README.md)。

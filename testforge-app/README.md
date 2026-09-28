@@ -7,12 +7,9 @@ TestForge 的 Java 21 / Spring Boot Gradle 多模块控制面。
 - 十个业务模块按领域边界协作，通过公开 Service、Port、Model 或 Event 交互，不跨模块访问 Repo。
 - MySQL 是状态真相源，Redis 只承担派发、租约辅助和短期实时数据。
 
-增量数据迁移使用 `yhc-framework/simple-migration:1.0.1`。首次在新机器构建前，
-需在 yhc-framework 根目录执行：
-
-```powershell
-.\gradlew.bat :commons:publishToMavenLocal :simple-migration:publishToMavenLocal
-```
+增量数据迁移使用随仓库提供的 `simple-migration-1.0.1.jar` 和 `commons-1.0.1.jar`，
+由 app 通过文件依赖引用，无需 yhc-framework 源码或本机 Maven 安装。
+版本、SHA-256、依赖与许可状态见 [libs/README.md](libs/README.md)。
 
 业务表和普通字段由实体及 `spring.jpa.hibernate.ddl-auto=update` 自动初始化与补齐。
 新的兼容、索引和数据修正 SQL 放入所属模块的 `src/main/resources/simple-migration`。
